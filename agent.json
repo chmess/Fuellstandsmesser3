@@ -153,6 +153,6 @@
     "http": [],
     "hooks": []
   },
-  "last_build": "/home/mac/ArduinoAgent/logs/20260914T213507.840155Z-Fuellstandsmesser3/report.json",
-  "last_flash": "/home/mac/ArduinoAgent/test-results/20260914T213447.572868Z-Fuellstandsmesser3-flash.json"
+  "last_build": "/home/mac/ArduinoAgent/logs/20260914T220932.419430Z-Fuellstandsmesser3/report.json",
+  "last_flash": "/home/mac/ArduinoAgent/test-results/20260914T220911.795031Z-Fuellstandsmesser3-flash.json"
 }
