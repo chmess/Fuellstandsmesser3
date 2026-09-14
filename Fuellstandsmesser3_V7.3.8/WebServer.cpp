@@ -1,5 +1,7 @@
 #ifdef FUELLSTANDSMESSER3_UNITY_BUILD
 
+#include "WebServerModule.h"
+
 // ============================================================================
 // WEB COMMON
 // ============================================================================
@@ -3938,4 +3940,3 @@ void serialDebugTask() {
 
 
 #endif // FUELLSTANDSMESSER3_UNITY_BUILD
-

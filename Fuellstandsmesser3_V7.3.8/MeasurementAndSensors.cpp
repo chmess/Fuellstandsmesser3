@@ -1,5 +1,7 @@
 #ifdef FUELLSTANDSMESSER3_UNITY_BUILD
 
+#include "MeasurementAndSensors.h"
+
 // ============================================================================
 // BME280
 // ============================================================================
@@ -1235,4 +1237,3 @@ void measurementTask() {
 
 
 #endif // FUELLSTANDSMESSER3_UNITY_BUILD
-

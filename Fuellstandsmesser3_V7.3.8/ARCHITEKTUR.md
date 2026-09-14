@@ -16,13 +16,13 @@ unverändert.
 | `Fuellstandsmesser3_V7.3.8.ino` | Arduino-Einstieg, bindet die App-Schnittstelle ein |
 | `Fuellstandsmesser3_App.h` | öffentliche Einstiegsschnittstelle (`setup`, `loop`) |
 | `Fuellstandsmesser3_App.cpp` | gemeinsame Includes, Zustand, Datentypen und Unity-Einbindung |
-| `Config.cpp` | Defaults, Validierung und persistente Konfiguration |
-| `DisplayAndSensors.cpp` | LED, I2C-Scan, OLED und BME280 |
-| `MeasurementAndSensors.cpp` | ToF-Sensoren, Filter, Tankberechnung und Messzyklus |
-| `Mqtt.cpp` | MQTT, JSON und Home-Assistant-Discovery |
-| `NetworkServices.cpp` | WLAN-nahe Dienste, mDNS, NTP und OTA |
-| `WebServer.cpp` | Weboberfläche, APIs, Historie, CSV und Web-OTA |
-| `Runtime.cpp` | Diagnose, Sensor-Recovery, `setup()` und `loop()` |
+| `Config.h/.cpp` | Defaults, Validierung und persistente Konfiguration |
+| `DisplayAndSensors.h/.cpp` | LED, I2C-Scan, OLED und BME280 |
+| `MeasurementAndSensors.h/.cpp` | ToF-Sensoren, Filter, Tankberechnung und Messzyklus |
+| `Mqtt.h/.cpp` | MQTT, JSON und Home-Assistant-Discovery |
+| `NetworkServices.h/.cpp` | WLAN-nahe Dienste, mDNS, NTP und OTA |
+| `WebServerModule.h/.cpp` | Weboberfläche, APIs, Historie, CSV und Web-OTA |
+| `Runtime.h/.cpp` | Diagnose, Sensor-Recovery, `setup()` und `loop()` |
 | `Fuellstandsmesser3_Formatting.cpp/.h` | HTML-/JSON-Formatierung und Taupunkt |
 
 ## Buildmodell
@@ -51,4 +51,3 @@ festgeschriebenen Bibliotheken. Vor Änderungen wird ein Agent-Backup erstellt.
 - Funktionsverhalten wird erst nach erfolgreichem Build weiter umstrukturiert.
 - Hardwaretests gelten nur als bestanden, wenn der Agent einen seriellen Bericht
   mit tatsächlicher Ausgabe erzeugt.
-

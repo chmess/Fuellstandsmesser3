@@ -1,5 +1,7 @@
 #ifdef FUELLSTANDSMESSER3_UNITY_BUILD
 
+#include "Config.h"
+
 // ============================================================================
 // CONFIG DEFAULTS
 // ============================================================================
@@ -468,4 +470,3 @@ String levelState() {
 
 
 #endif // FUELLSTANDSMESSER3_UNITY_BUILD
-

@@ -1044,6 +1044,13 @@ static bool saveGeneratedCompactHistory(const CompactHistoryDay* data,
                                         float pendingRefill);
 
 // Fachmodule werden als Unity-Einheit eingebunden.
+#include "Config.h"
+#include "DisplayAndSensors.h"
+#include "MeasurementAndSensors.h"
+#include "Mqtt.h"
+#include "NetworkServices.h"
+#include "WebServerModule.h"
+#include "Runtime.h"
 #include "Config.cpp"
 #include "DisplayAndSensors.cpp"
 #include "MeasurementAndSensors.cpp"

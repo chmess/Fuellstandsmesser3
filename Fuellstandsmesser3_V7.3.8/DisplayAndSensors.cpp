@@ -1,5 +1,7 @@
 #ifdef FUELLSTANDSMESSER3_UNITY_BUILD
 
+#include "DisplayAndSensors.h"
+
 // ============================================================================
 // LED
 // ============================================================================
@@ -959,4 +961,3 @@ void oledTask() {
 
 
 #endif // FUELLSTANDSMESSER3_UNITY_BUILD
-

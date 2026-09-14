@@ -1,5 +1,7 @@
 #ifdef FUELLSTANDSMESSER3_UNITY_BUILD
 
+#include "NetworkServices.h"
+
 // ============================================================================
 // mDNS
 // ============================================================================
@@ -255,4 +257,3 @@ void otaTask() {
 
 
 #endif // FUELLSTANDSMESSER3_UNITY_BUILD
-
