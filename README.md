@@ -15,4 +15,3 @@ Build und Upload erfolgen ausschließlich über den Arduino-Agent:
 arduino-agent build Fuellstandsmesser3
 arduino-agent flash Fuellstandsmesser3
 ```
-
