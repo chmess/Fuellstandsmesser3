@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "name": "Fuellstandsmesser3",
+  "sketch_path": "/home/mac/ArduinoAgent/projects/Fuellstandsmesser3/Fuellstandsmesser3_V7.3.8",
+  "source_path": "/home/mac/ArduinoAgent/backups/20260912T102722Z-import-staging/Fuellstandsmesser3/Fuellstandsmesser3_V7.3.8",
+  "import_backup": "/home/mac/ArduinoAgent/backups/20260912T102753.953366Z-Fuellstandsmesser3-import.tar.gz",
+  "imported": "20260912T102754.137949Z",
+  "fqbn": "esp32:esp32:esp32c3",
+  "board": "fuellstandsmesser3-c3",
+  "serial_port": "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_F0:F5:BD:FC:1B:A8-if00",
+  "baudrate": 115200,
+  "board_options": {
+    "CDCOnBoot": "cdc",
+    "FlashMode": "qio",
+    "FlashSize": "4M",
+    "PartitionScheme": "min_spiffs"
+  },
+  "core_version": "3.3.11",
+  "libraries": [
+    {
+      "name": "Wire",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "WiFi",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "Networking",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "WebServer",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "FS",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "DNSServer",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "ESP32 Async UDP",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "ESPmDNS",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "ArduinoOTA",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "Update",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "Preferences",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "SPIFFS",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "Adafruit GFX Library",
+      "version": "1.12.4",
+      "source": "user"
+    },
+    {
+      "name": "Adafruit BusIO",
+      "version": "1.17.4",
+      "source": "user"
+    },
+    {
+      "name": "SPI",
+      "version": "3.3.11",
+      "source": "platform"
+    },
+    {
+      "name": "Adafruit SSD1306",
+      "version": "2.5.16",
+      "source": "user"
+    },
+    {
+      "name": "Adafruit BME280 Library",
+      "version": "2.3.0",
+      "source": "user"
+    },
+    {
+      "name": "Adafruit Unified Sensor",
+      "version": "1.1.15",
+      "source": "user"
+    },
+    {
+      "name": "Adafruit_VL53L0X",
+      "version": "1.2.5",
+      "source": "user"
+    },
+    {
+      "name": "Adafruit VL53L1X",
+      "version": "3.1.2",
+      "source": "user"
+    },
+    {
+      "name": "SparkFun VL53L5CX Arduino Library",
+      "version": "1.0.3",
+      "source": "user"
+    },
+    {
+      "name": "PubSubClient",
+      "version": "2.8",
+      "source": "user"
+    },
+    {
+      "name": "Hash",
+      "version": "3.3.11",
+      "source": "platform"
+    }
+  ],
+  "libraries_locked": true,
+  "build_options": {
+    "jobs": 2,
+    "warnings": "default",
+    "properties": {},
+    "timeout": 1800
+  },
+  "upload_options": {
+    "verify": true,
+    "timeout": 180
+  },
+  "tests": {
+    "serial_seconds": 20,
+    "require_output": true,
+    "expect": [],
+    "forbid": [],
+    "reboot_threshold": 3,
+    "http": [],
+    "hooks": []
+  },
+  "last_build": "/home/mac/ArduinoAgent/logs/20260914T213507.840155Z-Fuellstandsmesser3/report.json",
+  "last_flash": "/home/mac/ArduinoAgent/test-results/20260914T213447.572868Z-Fuellstandsmesser3-flash.json"
+}
