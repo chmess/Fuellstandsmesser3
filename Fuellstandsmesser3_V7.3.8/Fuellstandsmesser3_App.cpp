@@ -1051,6 +1051,7 @@ static bool saveGeneratedCompactHistory(const CompactHistoryDay* data,
 #include "NetworkServices.h"
 #include "WebServerModule.h"
 #include "Runtime.h"
+#include "Language.h"
 #include "Config.cpp"
 #include "DisplayAndSensors.cpp"
 #include "MeasurementAndSensors.cpp"
@@ -1058,3 +1059,4 @@ static bool saveGeneratedCompactHistory(const CompactHistoryDay* data,
 #include "NetworkServices.cpp"
 #include "WebServer.cpp"
 #include "Runtime.cpp"
+#include "Language.cpp"

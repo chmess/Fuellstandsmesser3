@@ -2,6 +2,11 @@
 
 #include "WebServerModule.h"
 
+static void sendLocalizedHtml(int statusCode, String html) {
+  localizeWebHtml(html);
+  server->send(statusCode, "text/html; charset=utf-8", html);
+}
+
 // ============================================================================
 // WEB COMMON
 // ============================================================================
@@ -15,7 +20,9 @@ String pageHeader(
   html.reserve(3000);
 
   html += "<!DOCTYPE html>";
-  html += "<html lang='de'>";
+  html += "<html lang='";
+  html += languageCode();
+  html += "'>";
   html += "<head>";
   html += "<meta charset='UTF-8'>";
   html += "<meta name='viewport' ";
@@ -151,7 +158,7 @@ async function refresh(){try{const r=await fetch('/api/status?ts='+Date.now(),{c
 draw();refresh();loadHistory();setInterval(refresh,10000);setInterval(loadHistory,30000);addEventListener('resize',draw);setTimeout(draw,100)})();
 </script>
 )HTML";
-  server->send(200,"text/html; charset=utf-8",html);
+  sendLocalizedHtml(200, html);
 }
 
 // ============================================================================
@@ -509,7 +516,7 @@ void handleSettings() {
 )HTML";
 
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 void handleConfig() {
@@ -658,7 +665,7 @@ void handleConfigSave() {
 </div>
 )HTML";
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 // ============================================================================
@@ -711,7 +718,7 @@ void handleCalibration() {
   html += "</div>";
 
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 void handleCalibrationApply() {
@@ -752,7 +759,7 @@ void handleCalibrationApply() {
     html += "<p>Voll-Distanz: " + String(cfg.fullDistance, 1) + " mm</p>";
     html += "<a class='btn' href='/calibration'>Zurück</a></div>";
     html += pageFooter();
-    server->send(200, "text/html; charset=utf-8", html);
+    sendLocalizedHtml(200, html);
     return;
   }
 
@@ -796,7 +803,7 @@ void handleCalibrationApply() {
   html += "<p>Die Kalibrierspanne wurde beibehalten und der Nullpunkt auf den bekannten aktuellen Füllstand verschoben.</p>";
   html += "<a class='btn' href='/'>Status</a><a class='btn' href='/calibration'>Kalibrierung</a></div>";
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 // ============================================================================
@@ -841,7 +848,7 @@ void handleStatus() {
   html += "</table>";
   html += "</div>";
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 void handleApiPing() {
@@ -922,7 +929,7 @@ void handleSystemStatusPage() {
   html += "</div></div>";
   html += "<div class='card'><h2>Testdaten</h2><p class='muted'>Erzeugt realistische Testhistorien mit saisonalem Verbrauch und Nachfüllvorgängen.</p><p>Quelle: <select id='testSource'><option value='test'>TEST</option><option value='measured'>GEMESSEN</option><option value='imported'>IMPORTIERT</option></select></p><div class='linkrow'><form method='POST' action='/generate-test-history' style='display:inline' onsubmit=\"this.insertAdjacentHTML('beforeend','<input type=hidden name=source value='+document.getElementById('testSource').value+'>');return confirm('1 Jahr Testdaten erzeugen? Bestehende Historie wird ersetzt.')\"><button class='btn' type='submit'>🧪 1 Jahr Testdaten</button></form><form method='POST' action='/generate-test-history-10y' style='display:inline' onsubmit=\"this.insertAdjacentHTML('beforeend','<input type=hidden name=source value='+document.getElementById('testSource').value+'>');return confirm('10 Jahre Testdaten erzeugen? Bestehende Historie wird ersetzt.')\"><button class='btn' type='submit'>🧪 10 Jahre Testdaten</button></form><form method='POST' action='/clear-consumption-data' style='display:inline' onsubmit=\"return confirm('Alle Verbrauchs- und Historiedaten wirklich löschen?')\"><button class='btn danger' type='submit'>🗑 Verbrauchsdaten löschen</button></form></div></div>";
   html += "<div class='card'><h2>Wartungsaktionen</h2><div class='linkrow'><a class='btn' href='/calibration'>🔧 Kalibrierung</a><a class='btn' href='/update'>⬆ OTA / Firmware</a><a class='btn' href='/reboot' onclick=\"return confirm('ESP32 wirklich neu starten?')\">🔄 Reboot</a><a class='btn danger' href='/factory-reset' onclick=\"return confirm('Werkseinstellungen wirklich zurücksetzen?')\">⚠ Factory Reset</a></div></div>";
-  html += pageFooter();server->send(200,"text/html; charset=utf-8",html);
+  html += pageFooter();sendLocalizedHtml(200, html);
 }
 
 // ===== KOMPATIBILITÄT: ältere Tankverbrauch-/Nachfülllogik =====
@@ -1964,7 +1971,7 @@ void handleHistoryPage(){
 <div class='card'><h2>Verlaufsdaten</h2><div class='linkrow'><a class='btn' href='/history/import'>📥 CSV importieren</a><a class='btn' href='/history.csv?days=183'>CSV ½ Jahr</a><a class='btn' href='/history.csv?days=365'>CSV 1 Jahr</a><a class='btn' href='/history.csv?days=1825'>CSV 5 Jahre</a><a class='btn' href='/history.csv?days=3650'>CSV 10 Jahre</a></div></div>)HTML";
   html+=R"HTML(<script>(function(){const c=document.getElementById('hc'),t=document.getElementById('ht');let days=365,items=[],g=null;const f=v=>Number.isFinite(Number(v))?Number(v).toFixed(1):'--';function draw(){const r=c.getBoundingClientRect(),w=Math.max(320,Math.floor(r.width)),h=Math.floor(r.height),dpr=Math.max(1,devicePixelRatio||1);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);if(!items.length)return;const pl=42,pr=10,pt=15,pb=28,iw=w-pl-pr,ih=h-pt-pb,t0=items[0].time;let t1=items[items.length-1].time;if(t1<=t0)t1=t0+86400000;const px=z=>pl+(z-t0)/(t1-t0)*iw,py=p=>pt+ih-Math.max(0,Math.min(100,p))/100*ih;x.strokeStyle='#333';[0,25,50,75,100].forEach(v=>{let y=py(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillStyle='#777';x.font='10px Arial';x.fillText(v+'%',4,y+3)});const sampleDays=days>365?Math.max(1,Math.ceil(days/400)):1,maxLineGap=Math.max(129600000,sampleDays*86400000*1.75);x.beginPath();items.forEach((a,i)=>{let q=px(a.time),y=py(a.percent),gap=i?(a.time-items[i-1].time):0;(i&&gap<=maxLineGap)?x.lineTo(q,y):x.moveTo(q,y)});x.strokeStyle='#4da6ff';x.lineWidth=2;x.stroke();let mc=Math.max(1,...items.map(a=>a.consumedLiters||0));items.forEach(a=>{let q=px(a.time),bh=(a.consumedLiters/mc)*ih*.32;x.fillStyle='#ffb52e';x.fillRect(q-1,pt+ih-bh,2,bh);const src=Number(a.source)||0;x.fillStyle=src===1?'#ffd166':(src===2?'#ff6b6b':'#4da6ff');x.beginPath();if(src===1){x.arc(q,py(a.percent),4,0,Math.PI*2);x.strokeStyle=x.fillStyle;x.lineWidth=2;x.stroke()}else if(src===2){x.moveTo(q,py(a.percent)-4);x.lineTo(q+4,py(a.percent)+4);x.lineTo(q-4,py(a.percent)+4);x.closePath();x.fill()}else{x.arc(q,py(a.percent),2.7,0,Math.PI*2);x.fill()}if(a.refillLiters>0){x.fillStyle='#42d65b';x.beginPath();x.arc(q,pt+ih-5,5,0,Math.PI*2);x.fill()}});g={t0,t1,px}}
 c.onmousemove=e=>{if(!g||!items.length)return;let mx=e.offsetX,best=null,bd=1e9;items.forEach(a=>{let q=Math.abs(g.px(a.time)-mx);if(q<bd){bd=q;best=a}});if(!best||bd>25){t.style.display='none';return}let d=new Date(best.time);const srcName=Number(best.source)===1?'Import':(Number(best.source)===2?'Test':'Gemessen');t.innerHTML='<b>'+d.toLocaleDateString('de-DE')+'</b><br>Füllstand: '+f(best.percent)+' %<br>'+f(best.liters)+' L<br>Verbrauch: '+f(best.consumedLiters)+' L<br>Quelle: '+srcName+(best.refillLiters>0?'<br><span style="color:#42d65b">Nachfüllung: +'+f(best.refillLiters)+' L</span>':'');t.style.display='block';t.style.left=Math.min(c.clientWidth-185,Math.max(5,mx+12))+'px';t.style.top='10px'};c.onmouseleave=()=>t.style.display='none';async function loadRecentRefills(){const box=document.getElementById('recentRefills');try{const r=await fetch('/api/recent-refills?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();const a=j.items||[];if(!a.length){box.innerHTML='<p class="muted">Keine Nachfüllvorgänge vorhanden.</p>';return}let h='<table><tr><th>Datum</th><th>Menge</th><th>Füllstand danach</th></tr>';a.forEach(v=>{h+='<tr><td>'+v.date+'</td><td>+'+f(v.liters)+' L</td><td>'+((v.percent===null||v.percent===undefined)?'--':f(v.percent)+' %')+'</td></tr>'});h+='</table>';box.innerHTML=h}catch(e){box.innerHTML='<p class="muted">Nachfüllvorgänge konnten nicht geladen werden.</p>'}};async function load(n){days=n;document.querySelectorAll('.periodBtn').forEach(a=>a.classList.toggle('active',Number(a.dataset.days)===days));try{let r=await fetch('/api/history?days='+days+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);let raw=await r.text(),j;try{j=JSON.parse(raw)}catch(e){throw new Error('Ungültiges JSON: '+raw.substring(0,160))}items=j.items||[];document.getElementById('sd').textContent=days+' Tage';const z=j.stats||{};document.getElementById('sc').textContent=f(z.consumptionLiters)+' L';document.getElementById('sr').textContent=f(z.refillLiters)+' L';document.getElementById('sl').textContent=(Number.isFinite(Number(z.minPercent))&&Number.isFinite(Number(z.maxPercent)))?f(z.minPercent)+'–'+f(z.maxPercent)+' %':'--';draw()}catch(e){items=[];draw();document.getElementById('sd').textContent='Fehler';document.getElementById('sc').textContent='--';document.getElementById('sr').textContent='--';document.getElementById('sl').textContent=e.message}}function drawMonthChart(){const md=window.__monthData;if(!md)return;const c=document.getElementById('monthChart'),tip=document.getElementById('monthTip'),leg=document.getElementById('monthLegend');if(!c)return;const n=Math.max(1,Math.min(10,Number(document.getElementById('yearCount')?.value||5))),ys=md.ys.slice(-n),r=c.getBoundingClientRect(),w=Math.max(360,Math.floor(r.width)),h=Math.max(280,Math.floor(r.height)),dpr=Math.max(1,devicePixelRatio||1);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);const pl=46,pr=12,pt=18,pb=36,iw=w-pl-pr,ih=h-pt-pb;let maxV=1;for(const y of ys)for(let m=1;m<=12;m++)maxV=Math.max(maxV,md.net(md.monthly[y]?.[m]));const gy=v=>pt+ih-(v/maxV)*ih;x.strokeStyle='#333';x.fillStyle='#777';x.font='10px Arial';for(let i=0;i<=4;i++){const v=maxV*i/4,y=gy(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillText(Math.round(v)+' L',4,y+3)}const groupW=iw/12,barGap=2,barW=Math.max(2,(groupW-8)/Math.max(1,ys.length));const palette=['#4da6ff','#ffb52e','#42d65b','#c77dff','#ff6b6b','#00c2d1','#ffd166','#8ac926','#f72585','#9aa0a6'];const rects=[];for(let m=1;m<=12;m++){const gx=pl+(m-1)*groupW;x.fillStyle='#aaa';x.font='10px Arial';x.fillText(md.names[m],gx+2,h-10);ys.forEach((y,j)=>{const v=md.net(md.monthly[y]?.[m]),bh=(v/maxV)*ih,bx=gx+4+j*barW,by=pt+ih-bh;x.fillStyle=palette[j%palette.length];x.fillRect(bx,by,Math.max(1,barW-barGap),bh);rects.push({x:bx,y:by,w:Math.max(1,barW-barGap),h:bh,year:y,month:md.names[m],value:v,color:palette[j%palette.length]})})}leg.innerHTML=ys.map((y,j)=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:4px 14px 4px 0"><span style="display:inline-block;width:18px;height:12px;background:'+palette[j%palette.length]+';border-radius:2px;border:1px solid rgba(255,255,255,.35)"></span><b>Jahr '+y+'</b></span>').join('');c.onmousemove=e=>{const rr=c.getBoundingClientRect(),mx=e.clientX-rr.left,my=e.clientY-rr.top;let hit=null;for(const q of rects){if(mx>=q.x&&mx<=q.x+q.w&&my>=q.y&&my<=q.y+q.h){hit=q;break}}if(!hit){tip.style.display='none';return}tip.innerHTML='<b>'+hit.month+' '+hit.year+'</b><br>Verbrauch: '+f(hit.value)+' L';tip.style.display='block';tip.style.left=Math.min(c.clientWidth-170,Math.max(5,mx+12))+'px';tip.style.top=Math.max(5,my-20)+'px'};c.onmouseleave=()=>tip.style.display='none'}document.getElementById('yearCount')?.addEventListener('change',drawMonthChart);async function loadAnalysis(){try{const r=await fetch('/history.csv?days=3650&ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const raw=await r.text(),lines=raw.split(/\r?\n/).filter(Boolean),a=[];for(let i=1;i<lines.length;i++){const p=lines[i].split(';');if(p.length<5)continue;const dm=p[0].split('.');if(dm.length!==3)continue;const d=new Date(Number(dm[2]),Number(dm[1])-1,Number(dm[0]),12,0,0);const liters=Number(String(p[1]).replace(',','.')),cons=Number(String(p[3]).replace(',','.')),refill=Number(String(p[4]).replace(',','.'));if(!Number.isFinite(liters)||!Number.isFinite(d.getTime()))continue;a.push({time:d.getTime(),liters,consumedLiters:Number.isFinite(cons)?cons:0,refillLiters:Number.isFinite(refill)?refill:0})}a.sort((x,y)=>x.time-y.time);const monthly={},yearly={},years=new Set(),daysPerYear={};function mk(){return{cons:0,refill:0,days:0}}function add(q,v){const end=Number(v.liters),rf=Math.max(0,Number(v.refillLiters)||0),dc=Math.max(0,Number(v.consumedLiters)||0);if(!Number.isFinite(end))return;q.cons+=dc;q.refill+=rf;q.days++}let prevEnd=null;for(const v of a){const d=new Date(v.time),y=d.getFullYear(),m=d.getMonth()+1;years.add(y);daysPerYear[y]=(daysPerYear[y]||0)+1;monthly[y]??={};monthly[y][m]??=mk();yearly[y]??=mk();add(monthly[y][m],v);add(yearly[y],v);const e=Number(v.liters);if(Number.isFinite(e))prevEnd=e}function net(q){return q&&q.days?Math.max(0,Number(q.cons)||0):0}const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;document.getElementById('amCons').textContent=f(net(monthly[cy]?.[cm]))+' L';document.getElementById('ayCons').textContent=f(net(yearly[cy]))+' L';let all=mk();for(const v of a){add(all,v);}document.getElementById('avgDay').textContent=f(all.days?net(all)/all.days:0)+' L';function ytd(year){let q=mk();for(const v of a){const d=new Date(v.time);if(d.getFullYear()===year&&d.getMonth()<=now.getMonth()&&(d.getMonth()<now.getMonth()||d.getDate()<=now.getDate()))add(q,v)}return net(q)}const curYtd=ytd(cy),prevYtd=ytd(cy-1);document.getElementById('prevYearCons').textContent=f(prevYtd)+' L';document.getElementById('yearDelta').textContent=prevYtd>0?((curYtd-prevYtd)/prevYtd*100).toFixed(1)+' %':'--';const ys=[...years].sort((a,b)=>a-b),complete=ys.filter(y=>y<cy&&(daysPerYear[y]||0)>=330).slice(-4);let trend='--';if(complete.length>=2){const first=net(yearly[complete[0]]),last=net(yearly[complete[complete.length-1]]);if(first>0){const pct=(last-first)/first*100;trend=(pct>5?'steigend':(pct<-5?'fallend':'stabil'))+' ('+(pct>=0?'+':'')+pct.toFixed(1)+' %)'}}document.getElementById('trendText').textContent=trend;const names=['','Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];let h='<tr><th>Monat</th>'+ys.map(y=>'<th>'+y+'</th>').join('')+'</tr>';for(let m=1;m<=12;m++){h+='<tr><th>'+names[m]+'</th>'+ys.map(y=>'<td>'+f(net(monthly[y]?.[m]))+'</td>').join('')+'</tr>'}h+='<tr><th>Jahr gesamt</th>'+ys.map(y=>'<td><b>'+f(net(yearly[y]))+'</b></td>').join('')+'</tr>';document.getElementById('monthCompare').innerHTML=h;window.__monthData={ys,monthly,net,names};drawMonthChart()}catch(e){document.getElementById('monthCompare').innerHTML='<tr><td>Analyse konnte nicht geladen werden: '+e.message+'</td></tr>'}}document.querySelectorAll('.periodBtn').forEach(a=>a.onclick=e=>{e.preventDefault();load(Number(a.dataset.days))});load(365);loadRecentRefills();loadAnalysis();addEventListener('resize',()=>{draw();drawMonthChart()})})();</script>)HTML";
-  html+=pageFooter();server->send(200,"text/html; charset=utf-8",html);
+  html+=pageFooter();sendLocalizedHtml(200, html);
 }
 
 void handleRecentRefills() {
@@ -2630,7 +2637,7 @@ static void handleHistoryImportPage(bool resultPage=false, const String &message
   html+="<p><button name='action' value='preview' type='submit'>Vorschau</button> <button name='action' value='import' type='submit'>Importieren</button></p></form>";
   if(resultPage&&!message.isEmpty())html+="<div class='card'><b>"+htmlEscape(message)+"</b></div>";
   html+="<p><a class='btn' href='/history'>Zur Historie</a></p></div>";
-  html+=pageFooter(); server->send(200,"text/html; charset=utf-8",html);
+  html+=pageFooter(); sendLocalizedHtml(200, html);
 }
 
 void handleHistoryImportUpload(){
@@ -2662,7 +2669,7 @@ void handleHistoryImport(){
     if(count>show)html+="<tr><td colspan='4'>... weitere gültige Datensätze</td></tr>";
     html+="</table><p>Beim Import gewinnt bei gleichem Datum der zuletzt gelesene gültige Datensatz und darf einen gemessenen Wert überschreiben. Nachfüllungen aus einfachen Datum/Liter-Daten benötigen eine bestätigte dauerhafte Niveauanhebung.</p>";
     html+="<p><a class='btn' href='/history/import'>Neue Datei</a> <a class='btn' href='/history'>Abbrechen</a></p></div>";
-    html+=pageFooter(); server->send(200,"text/html; charset=utf-8",html); return;
+    html+=pageFooter(); sendLocalizedHtml(200, html); return;
   }
 
   // Zuerst die vorhandene Historie direkt in den gemeinsamen HistoryEntry-
@@ -2843,7 +2850,7 @@ void handleConsumption() {
   html += "</div>";
 
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 // ============================================================================
@@ -2967,7 +2974,7 @@ void handleClearConsumptionData() {
   html += "</div>";
   html += pageFooter();
 
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 static uint8_t requestedTestHistorySource() {
@@ -3158,7 +3165,7 @@ void handleGenerateTestHistory() {
   html += "<a class='btn' href='/update'>Diagnose</a>";
   html += "</div>";
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 
@@ -3443,7 +3450,7 @@ void handleGenerate10YearTestHistory() {
   html += "<a class='btn' href='/history'>Historie</a>";
   html += "</div>";
   html += pageFooter();
-  server->send(200, "text/html; charset=utf-8", html);
+  sendLocalizedHtml(200, html);
 }
 
 

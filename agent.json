@@ -137,7 +137,9 @@
   "build_options": {
     "jobs": 2,
     "warnings": "default",
-    "properties": {},
+    "properties": {
+      "compiler.cpp.extra_flags": "-DFUELLSTANDSMESSER3_LANGUAGE=0"
+    },
     "timeout": 1800
   },
   "upload_options": {
@@ -153,6 +155,6 @@
     "http": [],
     "hooks": []
   },
-  "last_build": "/home/mac/ArduinoAgent/logs/20260914T220932.419430Z-Fuellstandsmesser3/report.json",
-  "last_flash": "/home/mac/ArduinoAgent/test-results/20260914T220911.795031Z-Fuellstandsmesser3-flash.json"
+  "last_build": "/home/mac/ArduinoAgent/logs/20260915T092722.387901Z-Fuellstandsmesser3/report.json",
+  "last_flash": "/home/mac/ArduinoAgent/test-results/20260915T092709.784025Z-Fuellstandsmesser3-flash.json"
 }
