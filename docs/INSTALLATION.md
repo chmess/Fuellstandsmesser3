@@ -32,6 +32,25 @@ arduino-agent build Fuellstandsmesser3
 arduino-agent flash Fuellstandsmesser3
 ```
 
+Das GitHub-Release enthält zwei unterschiedliche Binärdateien:
+
+- `Fuellstandsmesser3-V7.4.0.bin` ist nur das Anwendungsabbild. Es eignet
+  sich für Web-OTA und für ein bereits passend partitioniertes Gerät.
+- `Fuellstandsmesser3-V7.4.0-full-4MB.bin` ist das vollständige 4-MB-Abbild
+  mit Bootloader, Partitionstabelle, Boot-App und Firmware. Es wird bei einer
+  kabelgebundenen Neuinstallation ab Adresse `0x0` geschrieben und ersetzt
+  dabei den gesamten Flash einschließlich vorhandener Konfiguration und
+  Historie.
+
+Beispiel für die vollständige Neuinstallation auf dem bestätigten ESP32-C3:
+
+```sh
+esptool --chip esp32c3 --port /dev/serial/by-id/GERAET write-flash 0x0 Fuellstandsmesser3-V7.4.0-full-4MB.bin
+```
+
+Im verwalteten Projekt bleibt `arduino-agent flash Fuellstandsmesser3` der
+bevorzugte Weg, weil dabei Boardidentität und Build geprüft werden.
+
 Serielle Diagnose: 115200 Baud. Das Öffnen des seriellen Ports kann beim
 verwendeten ESP32-C3 einen USB-UART-Reset auslösen.
 

@@ -75,9 +75,14 @@ Die festgeschriebenen Abhängigkeiten stehen in
 
 ## Fertige Firmware
 
-Die geprüfte OTA-Datei `Fuellstandsmesser3-V7.4.0.bin` steht im
-[GitHub-Release V7.4.0](https://github.com/chmess/Fuellstandsmesser3/releases/tag/v7.4.0).
-Der SHA-256-Prüfwert ist in den Release Notes dokumentiert.
+Im [GitHub-Release V7.4.0](https://github.com/chmess/Fuellstandsmesser3/releases/tag/v7.4.0)
+stehen zwei geprüfte Abbilder:
+
+- `Fuellstandsmesser3-V7.4.0.bin` für OTA bzw. die App-Partition
+- `Fuellstandsmesser3-V7.4.0-full-4MB.bin` als vollständiges, direkt ab
+  Adresse `0x0` flashbares 4-MB-Abbild
+
+Die SHA-256-Prüfwerte und Flash-Hinweise stehen in den Release Notes.
 
 ## Dokumentation
 

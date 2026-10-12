@@ -40,3 +40,11 @@
 
 - `Fuellstandsmesser3-V7.4.0.bin` – OTA-/App-Binärdatei
 - SHA-256: `b5427f64dd039db5dc77829c64c65ebc669a5245f2b3d91c5022c32fad9ca3f4`
+- `Fuellstandsmesser3-V7.4.0-full-4MB.bin` – vollständiges Flash-Abbild für
+  ESP32-C3 mit Bootloader, Partitionstabelle, Boot-App und Firmware; direkt ab
+  Adresse `0x0` flashbar
+- SHA-256: `4b913ab9e1d165a9305f398ad59a3daa21b1455f0411739b16957df684ea9621`
+
+Das vollständige Abbild überschreibt alle 4 MB einschließlich vorhandener
+Konfiguration und Historie. Für Web-OTA ist ausschließlich die kleinere
+OTA-/App-Datei zu verwenden.
