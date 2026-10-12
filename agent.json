@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Fuellstandsmesser3",
-  "sketch_path": "/home/mac/ArduinoAgent/projects/Fuellstandsmesser3/Fuellstandsmesser3_V7.3.8",
+  "sketch_path": "/home/mac/ArduinoAgent/projects/Fuellstandsmesser3/Fuellstandsmesser3_V7.4.0",
   "source_path": "/home/mac/ArduinoAgent/backups/20260912T102722Z-import-staging/Fuellstandsmesser3/Fuellstandsmesser3_V7.3.8",
   "import_backup": "/home/mac/ArduinoAgent/backups/20260912T102753.953366Z-Fuellstandsmesser3-import.tar.gz",
   "imported": "20260912T102754.137949Z",
@@ -108,6 +108,11 @@
       "source": "user"
     },
     {
+      "name": "Adafruit BMP280 Library",
+      "version": "2.6.8",
+      "source": "user"
+    },
+    {
       "name": "Adafruit_VL53L0X",
       "version": "1.2.5",
       "source": "user"
@@ -135,7 +140,7 @@
   ],
   "libraries_locked": true,
   "build_options": {
-    "jobs": 2,
+    "jobs": 3,
     "warnings": "default",
     "properties": {
       "compiler.cpp.extra_flags": "-DFUELLSTANDSMESSER3_LANGUAGE=0"
@@ -155,6 +160,6 @@
     "http": [],
     "hooks": []
   },
-  "last_build": "/home/mac/ArduinoAgent/logs/20260915T092722.387901Z-Fuellstandsmesser3/report.json",
-  "last_flash": "/home/mac/ArduinoAgent/test-results/20260915T092709.784025Z-Fuellstandsmesser3-flash.json"
+  "last_build": "/home/mac/ArduinoAgent/logs/20261012T184924.737654Z-Fuellstandsmesser3/report.json",
+  "last_flash": "/home/mac/ArduinoAgent/test-results/20261012T184914.216044Z-Fuellstandsmesser3-flash.json"
 }

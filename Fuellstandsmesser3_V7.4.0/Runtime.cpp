@@ -31,6 +31,27 @@ void reinitializeSensors(bool force) {
     return;
   }
 
+  // Ein VL53L0X kann am Bus korrekt erreichbar sein, aber wegen fehlendem
+  // Ziel/zu schwachem Signal ungueltige RangeStatus-Werte liefern. Ein
+  // erneutes begin() auf demselben bereits initialisierten Chip kann im
+  // Adafruit-Treiber waehrend der Kalibrierung dauerhaft warten. In diesem
+  // Fall den laufenden Treiber beibehalten und spaeter erneut messen.
+  // War der Sensor dagegen wirklich weg, setzt der Pfad weiter unten vlOK
+  // auf false und SENSOR_AUTO; Hot-Plug-Recovery bleibt damit erhalten.
+  if (!force &&
+      vlOK &&
+      cfg.vlSensorType == SENSOR_VL53L0X &&
+      tofDevicePresent()) {
+    lastSensorReinit = now;
+    sensorFailureSince = now;
+    systemState = STATE_SENSOR_ERROR;
+
+    if (debugEnabled(DEBUG_LEVEL_WARN)) {
+      Serial.println(F("[SENSOR] VL53L0X erreichbar - Neuinitialisierung uebersprungen"));
+    }
+    return;
+  }
+
   sensorReinitInProgress = true;
   lastSensorReinit = now;
   sensorReinitCount++;
@@ -64,8 +85,9 @@ void reinitializeSensors(bool force) {
     return;
   }
 
-  // BME280 nur neu initialisieren, wenn er tatsächlich nicht bereit ist.
-  // Ein funktionierender BME wird von einer ToF-Unterbrechung nicht angefasst.
+  // Den BME280/BMP280 nur neu initialisieren, wenn der Umweltsensor nicht
+  // bereit ist. Ein funktionierender Sensor bleibt bei einer ToF-Unterbrechung
+  // unangetastet.
   if (!bmeOK) {
     bmeInit();
   }
@@ -108,6 +130,10 @@ void initializeSensors() {
 
   i2cScan();
 
+  // Optional: Die RTC darf fehlen. Bei gueltiger Zeit ueberbrueckt sie einen
+  // Start ohne WLAN/NTP; nach erfolgreichem NTP-Sync wird sie aktualisiert.
+  rtcInit();
+
   oledInit();
   // Hauptseite unmittelbar nach OLED-Initialisierung zeichnen.
   lastOLED = millis();
@@ -147,7 +173,8 @@ constexpr float REFILL_MAX_L_PER_MIN = 1500.0f;
 void printStartupDiagnostics() {
   Serial.println();
   Serial.println(F("=================================================="));
-  Serial.println(F(" Fuellstandsmesser V7.3.8"));
+  Serial.print(F(" Fuellstandsmesser "));
+  Serial.println(FW_VERSION);
   Serial.println(F(" Hardware: ESP32-C3 Super Mini"));
   Serial.print(F(" Arduino ESP32 Core: "));
 #if defined(ESP_ARDUINO_VERSION_MAJOR)
@@ -183,7 +210,7 @@ void printStartupDiagnostics() {
   Serial.println(F(" Partition: bitte Arduino IDE / Boarddefinition pruefen"));
   Serial.println(F(" Erwartet: Minimal SPIFFS"));
   Serial.println(F(" Hardware V3.1: SDA=GPIO4, SCL=GPIO5, LED=GPIO8; Display-Taste Default GPIO9"));
-  Serial.println(F(" I2C: OLED=0x3C, VL53=0x29, BME280=0x76"));
+  Serial.println(F(" I2C: OLED=0x3C, VL53=0x29, BME/BMP280=0x76, DS3231 optional=0x68"));
   Serial.println(F(" ToF: automatische Erkennung VL53L0X / VL53L1X / VL53L5CX"));
   Serial.println(F("=================================================="));
   Serial.println();
@@ -244,7 +271,7 @@ void setup() {
   Serial.print(" ");
   Serial.println(__TIME__);
   Serial.println(" Hardware-Pins: SDA=GPIO4, SCL=GPIO5");
-  Serial.println(" I2C: OLED=0x3C, VL53=0x29, BME280=0x76");
+  Serial.println(" I2C: OLED=0x3C, VL53=0x29, BME/BMP280=0x76, DS3231 optional=0x68");
   Serial.println(
     "========================================"
   );
@@ -282,12 +309,26 @@ void setup() {
 
   initializeSensors();
 
-  // V7.3.8: kurze rein visuelle OLED-Bootanimation.
+  // Kurze rein visuelle OLED-Bootanimation.
   oledBootTankAnimation();
 
   initConsumptionTracking();
 
   startWiFi();
+
+  // Der Supervisor laeuft getrennt von loop() und kann dadurch auch einen
+  // dauerhaft blockierenden HTTP- oder Sensortreiber-Aufruf erkennen.
+  loopHeartbeatMs = millis();
+  if (xTaskCreate(
+        loopSupervisorTask,
+        "loop-supervisor",
+        2048,
+        nullptr,
+        1,
+        &loopSupervisorTaskHandle) != pdPASS) {
+    loopSupervisorTaskHandle = nullptr;
+    Serial.println(F("[RECOVERY] WARNUNG: Supervisor konnte nicht starten"));
+  }
 
   Serial.println(
     "[BOOT] Setup abgeschlossen"
@@ -404,6 +445,8 @@ bool updateRefillDetection(float currentLiters) {
 }
 
 void loop() {
+  loopHeartbeatMs = millis();
+
   updateMemoryDiagnostics();
 
   webTask();
@@ -411,6 +454,8 @@ void loop() {
   wifiTask();
 
   ntpTask();
+
+  rtcTask();
 
   otaTask();
 

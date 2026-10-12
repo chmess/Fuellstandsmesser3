@@ -226,12 +226,14 @@ void publishHomeAssistantDiscovery() {
   if (bmeOK) {
     publishHaSensorConfig("temperature", "Temperatur", "temperature_c",
                           "°C", "temperature", "measurement", "mdi:thermometer");
-    publishHaSensorConfig("humidity", "Luftfeuchtigkeit", "humidity_percent",
-                          "%", "humidity", "measurement", "mdi:water-percent");
     publishHaSensorConfig("pressure", "Luftdruck", "pressure_hpa",
                           "hPa", "atmospheric_pressure", "measurement", "mdi:gauge");
-    publishHaSensorConfig("dew_point", "Taupunkt", "dew_point_c",
-                          "°C", "temperature", "measurement", "mdi:thermometer-water");
+    if (environmentSensorType == ENV_SENSOR_BME280) {
+      publishHaSensorConfig("humidity", "Luftfeuchtigkeit", "humidity_percent",
+                            "%", "humidity", "measurement", "mdi:water-percent");
+      publishHaSensorConfig("dew_point", "Taupunkt", "dew_point_c",
+                            "°C", "temperature", "measurement", "mdi:thermometer-water");
+    }
   }
 
   Serial.println("[HA] MQTT Discovery publiziert");
@@ -396,6 +398,26 @@ String buildMqttJson() {
   json += "\"bme280_ok\":";
   json += bmeOK ? "true" : "false";
   json += ",";
+
+  json += "\"environment_sensor\":\"";
+  json += environmentSensorName();
+  json += "\",";
+
+  json += "\"rtc_present\":";
+  json += rtcAvailable() ? "true" : "false";
+  json += ",";
+
+  json += "\"rtc_valid\":";
+  json += rtcHasValidTime() ? "true" : "false";
+  json += ",";
+
+  json += "\"ntp_synced\":";
+  json += ntpHasSynced() ? "true" : "false";
+  json += ",";
+
+  json += "\"time_source\":\"";
+  json += activeTimeSource();
+  json += "\",";
 
   json += "\"oled_ok\":";
   json += oledOK ? "true" : "false";
@@ -848,6 +870,17 @@ void mqttTask() {
 
   uint32_t now = millis();
 
+  // Beim ersten WLAN-Start benutzen SNTP und ein MQTT-Hostname beide die
+  // lwIP-DNS-Infrastruktur. Auf dem ESP32-C3 darf der MQTT-DNS-Aufruf nicht
+  // genau in die noch laufende SNTP-Initialisierung fallen (TCP/IP-Core-
+  // Assert). Daher auf den ersten NTP-Sync warten, aber MQTT bei einem nicht
+  // erreichbaren Zeitserver nach einer begrenzten Schonfrist trotzdem starten.
+  if (cfg.ntpEnabled && ntpStarted && !ntpHasSynced() &&
+      wifiConnectedSince != 0 &&
+      (uint32_t)(now - wifiConnectedSince) < MQTT_NTP_STARTUP_GUARD) {
+    return;
+  }
+
   if (!mqttClient.connected()) {
 
     if (now - lastMqttAttempt < mqttReconnectDelay) {
@@ -932,16 +965,26 @@ void startWebServer() {
 
 void stopWebServer() {
 
-  if (!webServerStarted || server == nullptr) {
+  if (server == nullptr) {
     webServerStarted = false;
+    webServerConfigured = false;
     return;
   }
 
-  server->stop();
+  if (webServerStarted) {
+    server->stop();
+  }
+
+  // Nach einem echten Wechsel der WLAN-Schnittstelle einen frischen Listener
+  // samt Routen erzeugen. Ein bereits geschlossener NetworkServer liess sich
+  // auf diesem Core nach dem Reconnect nicht immer erneut an Port 80 binden.
+  delete server;
+  server = nullptr;
+  webServerConfigured = false;
   webServerStarted = false;
 
   if (debugEnabled(DEBUG_LEVEL_DETAIL)) {
-    Serial.println("[WEB] Server gestoppt");
+    Serial.println("[WEB] Server gestoppt und freigegeben");
   }
 }
 
@@ -1034,7 +1077,30 @@ void stopAccessPoint() {
   apMode = false;
 }
 
+void handleWiFiLinkEvent(arduino_event_id_t event) {
+  // Netzwerk-Callbacks laufen in einem separaten Task. Hier deshalb nur
+  // atomare Flags/Zahlen setzen; WebServer und Serial werden im loop bedient.
+  if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+    wifiLinkDropObserved = true;
+    wifiDisconnectEventCount++;
+    return;
+  }
+
+  if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP && wifiLinkDropObserved) {
+    webServerRebindRequestedAt = millis();
+    webServerRebindPending = true;
+    wifiLinkDropObserved = false;
+  }
+}
+
 void startWiFi() {
+
+  static bool eventTrackingRegistered = false;
+  if (!eventTrackingRegistered) {
+    WiFi.onEvent(handleWiFiLinkEvent, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    WiFi.onEvent(handleWiFiLinkEvent, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+    eventTrackingRegistered = true;
+  }
 
   // Kein WLAN konfiguriert -> lokaler Setup-AP.
   if (cfg.wifiSSID[0] == '\0') {
@@ -1136,6 +1202,8 @@ void wifiTask() {
 
   if (status == WL_CONNECTED) {
 
+    wifiDisconnectedSince = 0;
+
     if (wifiConnecting) {
 
       wifiConnecting = false;
@@ -1158,10 +1226,27 @@ void wifiTask() {
 
       // Netzwerk ist jetzt garantiert aktiv -> Webserver starten.
       startWebServer();
+      webServerRebindPending = false;
 
       setupMDNS();
       setupNTP();
       setupOTA();
+    }
+
+    // Ein kurzer Disconnect kann komplett waehrend eines blockierenden
+    // HTTP-Writes passieren. WiFi.status() ist danach schon wieder CONNECTED,
+    // der alte Listener gehoert aber noch zur verlorenen Verbindung. Erst
+    // nach stabiler IP und ausserhalb des Event-Callbacks frisch aufbauen.
+    if (!wifiConnecting && webServerRebindPending &&
+        (uint32_t)(millis() - webServerRebindRequestedAt) >= WEB_REBIND_STABLE_DELAY) {
+      if (debugEnabled(DEBUG_LEVEL_WARN)) {
+        Serial.println(F("[WEB] Listener nach WLAN-Reconnect neu aufbauen"));
+      }
+      stopWebServer();
+      delay(2);
+      startWebServer();
+      webServerRebindPending = false;
+      webServerRebindCount++;
     }
 
     return;
@@ -1184,6 +1269,18 @@ void wifiTask() {
       return;
     }
 
+    return;
+  }
+
+  // Kurze Funkloecher vom WiFi-Autoreconnect abfangen lassen. Ein sofortiger
+  // kompletter Neuaufbau beendet sonst bei schwachem RSSI unnoetig den
+  // funktionierenden HTTP-Listener.
+  if (wifiDisconnectedSince == 0) {
+    wifiDisconnectedSince = now;
+    return;
+  }
+
+  if (now - wifiDisconnectedSince < WIFI_DISCONNECT_GRACE) {
     return;
   }
 
@@ -1228,6 +1325,7 @@ void wifiTask() {
     cfg.wifiPassword
   );
 
+  wifiDisconnectedSince = 0;
   wifiConnecting = true;
   systemState = STATE_WIFI_CONNECTING;
 }

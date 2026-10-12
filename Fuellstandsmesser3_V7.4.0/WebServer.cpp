@@ -2,8 +2,15 @@
 
 #include "WebServerModule.h"
 
-static void sendLocalizedHtml(int statusCode, String html) {
+static void sendLocalizedHtml(int statusCode, String &html) {
   localizeWebHtml(html);
+
+  // Ein Browser, der die Verbindung waehrend einer grossen HTML-Antwort
+  // abbricht, darf die einzige Arduino-loop nicht sekundenlang festhalten.
+  // Der Core setzt hier sonst pauschal 5 s; fuer Antworten im lokalen Netz
+  // reichen 2 s ohne Schreibfortschritt. Das ist besonders fuer die knapp
+  // 13 KB grosse Einstellungsseite wichtig.
+  server->client().setTimeout(2000);
   server->send(statusCode, "text/html; charset=utf-8", html);
 }
 
@@ -125,7 +132,7 @@ String pageFooter() {
 // ============================================================================
 
 void handleRoot() {
-  String html = pageHeader("Fuellstandsmesser3 V7.3.8");
+  String html = pageHeader(String("Fuellstandsmesser3 ") + FW_VERSION);
   html.reserve(18000);
   html += R"HTML(
 <style>
@@ -137,14 +144,18 @@ void handleRoot() {
 <div class='dash'>
 <div class='tile hero'><div class='tank'><div id='tankFill' class='tankFill'></div><div class='tankMark'></div><div id='tankScale' class='tankScale'>-- %</div></div><div style='flex:1;width:100%'><div class='label'>Füllstand aktuell</div><div><span id='liters' class='big'>--</span> <span class='unit'>Liter</span></div><div class='bar'><div id='levelBar' class='barFill'></div></div><div class='metrics'><div class='metric'><span class='muted'>Füllhöhe</span><b id='height'>-- mm</b></div><div class='metric'><span class='muted'>Sensorabstand</span><b id='distance'>-- mm</b></div><div class='metric'><span class='muted'>Tankfaktor</span><b id='litersPerMm'>-- L/mm</b></div></div><div class='muted' id='updated'>Warte auf Messdaten …</div></div></div>
 <div class='tile side'><h2>Verbrauch</h2><div class='metric'><span class='muted'>Heute</span><b id='consToday'>-- L</b></div><div class='metric'><span class='muted'>7 Tage</span><b id='consWeek'>-- L</b></div><div class='metric'><span class='muted'>30 Tage</span><b id='consMonth'>-- L</b></div><div class='metric'><span class='muted'>365 Tage</span><b id='cons365'>-- L</b></div><div class='metric'><span class='muted'>Ø 30 Tage</span><b id='consAvg'>-- L/Tag</b></div></div>
-<div class='tile statusSide'><h2>Status</h2><div class='statusGrid'><div class='status'><span id='dotWifi' class='dot gray'></span>WLAN<small id='txtWifi'>--</small></div><div class='status'><span id='dotMqtt' class='dot gray'></span>MQTT<small id='txtMqtt'>--</small></div><div class='status'><span id='dotTof' class='dot gray'></span>ToF<small id='txtTof'>--</small></div><div class='status'><span id='dotBme' class='dot gray'></span>BME280<small id='txtBme'>--</small></div><div class='status'><span id='dotSpiffs' class='dot gray'></span>SPIFFS<small id='txtSpiffs'>--</small></div><div class='status'><span id='dotHist' class='dot gray'></span>Historie<small id='txtHist'>--</small></div><div class='status'><span id='dotOta' class='dot blue'></span>OTA<small id='txtOta'>Bereit</small></div></div></div>
+<div class='tile statusSide'><h2>Status</h2><div class='statusGrid'><div class='status'><span id='dotWifi' class='dot gray'></span>WLAN<small id='txtWifi'>--</small></div><div class='status'><span id='dotMqtt' class='dot gray'></span>MQTT<small id='txtMqtt'>--</small></div><div class='status'><span id='dotTof' class='dot gray'></span>ToF<small id='txtTof'>--</small></div><div class='status'><span id='dotBme' class='dot gray'></span>Umwelt<small id='txtBme'>--</small></div><div class='status'><span id='dotRtc' class='dot gray'></span>RTC<small id='txtRtc'>--</small></div><div class='status'><span id='dotSpiffs' class='dot gray'></span>SPIFFS<small id='txtSpiffs'>--</small></div><div class='status'><span id='dotHist' class='dot gray'></span>Historie<small id='txtHist'>--</small></div><div class='status'><span id='dotOta' class='dot blue'></span>OTA<small id='txtOta'>Bereit</small></div></div></div>
 <div class='tile wide'><div class='chartHead'><h2 style='margin:0'>Füllstand & Verbrauch</h2><div class='periods'><button class='periodBtn' data-period='183'>½ Jahr</button><button class='periodBtn active' data-period='365'>1 Jahr</button><button class='periodBtn' data-period='1825'>5 Jahre</button><button class='periodBtn' data-period='3650'>10 Jahre</button></div></div><div class='chartWrap'><canvas id='chart' class='chart'></canvas><div id='tip' class='tooltip'></div></div><div class='legend'><span><i style='background:#4da6ff'></i>Füllstand</span><span><i style='background:#ffb52e'></i>Verbrauch</span><span><i style='background:#42d65b'></i>Nachfüllung</span></div></div>
-<div class='tile infoSide'><h2>Umgebung</h2><div class='infoGrid'><div class='metric'><span class='muted'>Temperatur</span><b id='temp'>-- °C</b></div><div class='metric'><span class='muted'>Feuchte</span><b id='hum'>-- %</b></div><div class='metric'><span class='muted'>Druck</span><b id='press'>-- hPa</b></div><div class='metric'><span class='muted'>Taupunkt</span><b id='dew'>-- °C</b></div></div></div><div class='tile infoSide'><h2>System</h2><div class='infoGrid'><div class='metric'><span class='muted'>Datum / Uhrzeit</span><b id='dt'>--</b></div><div class='metric'><span class='muted'>RSSI</span><b id='rssi'>-- dBm</b></div><div class='metric'><span class='muted'>Firmware</span><b>V7.3.8</b></div></div></div>
-</div><div class='footerNote'>Fuellstandsmesser3 V7.3.8 · Dashboard</div>
+<div class='tile infoSide'><h2>Umgebung</h2><div class='infoGrid'><div class='metric'><span class='muted'>Temperatur</span><b id='temp'>-- °C</b></div><div class='metric'><span class='muted'>Feuchte</span><b id='hum'>-- %</b></div><div class='metric'><span class='muted'>Druck</span><b id='press'>-- hPa</b></div><div class='metric'><span class='muted'>Taupunkt</span><b id='dew'>-- °C</b></div></div></div><div class='tile infoSide'><h2>System</h2><div class='infoGrid'><div class='metric'><span class='muted'>Datum / Uhrzeit</span><b id='dt'>--</b></div><div class='metric'><span class='muted'>RSSI</span><b id='rssi'>-- dBm</b></div><div class='metric'><span class='muted'>Firmware</span><b>)HTML";
+  html += FW_VERSION;
+  html += R"HTML(</b></div></div></div>
+</div><div class='footerNote'>Fuellstandsmesser3 )HTML";
+  html += FW_VERSION;
+  html += R"HTML( · Dashboard</div>
 <script>
-(function(){const $=id=>document.getElementById(id),fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'--';let period=365,items=[],geom=null;
+(function(){const $=id=>document.getElementById(id),fmt=(v,d=1)=>(v!==null&&v!==''&&Number.isFinite(Number(v)))?Number(v).toFixed(d):'--';let period=365,items=[],geom=null;
 function dot(id,state){const e=$(id);if(e)e.className='dot '+(state?'green':'red')}
-function status(d){if(!d)return;const p=Math.max(0,Math.min(100,Number(d.level_percent)||0));$('tankScale').textContent=fmt(p)+' %';$('liters').textContent=fmt(d.level_liters);$('height').textContent=fmt(d.level_height_mm)+' mm';$('distance').textContent=fmt(d.filtered_distance_mm)+' mm';$('litersPerMm').textContent=fmt(d.liters_per_mm,2)+' L/mm';$('consToday').textContent=fmt(d.consumption_today_l)+' L';$('consWeek').textContent=fmt(d.consumption_7d_l)+' L';$('consMonth').textContent=fmt(d.consumption_30d_l)+' L';$('cons365').textContent=fmt(d.consumption_365d_l)+' L';$('consAvg').textContent=fmt(d.consumption_avg_30d_l_day)+' L/Tag';$('temp').textContent=fmt(d.temperature_c)+' °C';$('hum').textContent=fmt(d.humidity_percent)+' %';$('press').textContent=fmt(d.pressure_hpa)+' hPa';$('dew').textContent=fmt(d.dew_point_c)+' °C';$('dt').textContent=(d.date||'--')+' '+(d.time||'');$('rssi').textContent=fmt(d.rssi,0)+' dBm';dot('dotWifi',!!d.wifi_connected);dot('dotMqtt',!!d.mqtt_connected);dot('dotTof',!!d.vl_ok);dot('dotBme',!!d.bme280_ok);dot('dotSpiffs',!!d.spiffs_ready);dot('dotHist',!!d.history_ready);$('txtWifi').textContent=d.wifi_connected?'OK':'Fehler';$('txtMqtt').textContent=d.mqtt_connected?'OK':'Fehler';$('txtTof').textContent=d.vl_ok?'OK':'Fehler';$('txtBme').textContent=d.bme280_ok?'OK':'Fehler';$('txtSpiffs').textContent=d.spiffs_ready?'OK':'Fehler';$('txtHist').textContent=d.history_ready?'OK':'Fehler';const fill=$('tankFill'),bar=$('levelBar');fill.style.height=p+'%';bar.style.width=p+'%';const col=p<20?'#ff4d4d':(p<40?'#ffad33':'#42d65b');fill.style.background=col;bar.style.background=col;$('updated').textContent='Letzte Aktualisierung: '+(d.time||new Date().toLocaleTimeString('de-DE'))}
+function status(d){if(!d)return;const p=Math.max(0,Math.min(100,Number(d.level_percent)||0));$('tankScale').textContent=fmt(p)+' %';$('liters').textContent=fmt(d.level_liters);$('height').textContent=fmt(d.level_height_mm)+' mm';$('distance').textContent=fmt(d.filtered_distance_mm)+' mm';$('litersPerMm').textContent=fmt(d.liters_per_mm,2)+' L/mm';$('consToday').textContent=fmt(d.consumption_today_l)+' L';$('consWeek').textContent=fmt(d.consumption_7d_l)+' L';$('consMonth').textContent=fmt(d.consumption_30d_l)+' L';$('cons365').textContent=fmt(d.consumption_365d_l)+' L';$('consAvg').textContent=fmt(d.consumption_avg_30d_l_day)+' L/Tag';$('temp').textContent=fmt(d.temperature_c)+' °C';$('hum').textContent=fmt(d.humidity_percent)+' %';$('press').textContent=fmt(d.pressure_hpa)+' hPa';$('dew').textContent=fmt(d.dew_point_c)+' °C';$('dt').textContent=(d.date||'--')+' '+(d.time||'');$('rssi').textContent=fmt(d.rssi,0)+' dBm';dot('dotWifi',!!d.wifi_connected);dot('dotMqtt',!!d.mqtt_connected);dot('dotTof',!!d.vl_ok);dot('dotBme',!!d.bme280_ok);const rtcDot=$('dotRtc'),rtcText=$('txtRtc');if(d.rtc_present){rtcDot.className='dot '+(d.rtc_valid?'green':'orange');rtcText.textContent=d.rtc_valid?'OK · '+(d.time_source||'DS3231'):'Zeit ungültig'}else{rtcDot.className='dot gray';rtcText.textContent='Optional fehlt'}dot('dotSpiffs',!!d.spiffs_ready);dot('dotHist',!!d.history_ready);$('txtWifi').textContent=d.wifi_connected?'OK':'Fehler';$('txtMqtt').textContent=d.mqtt_connected?'OK':'Fehler';$('txtTof').textContent=d.vl_ok?'OK':'Fehler';$('txtBme').textContent=d.bme280_ok?(d.environment_sensor||'OK'):'Fehler';$('txtSpiffs').textContent=d.spiffs_ready?'OK':'Fehler';$('txtHist').textContent=d.history_ready?'OK':'Fehler';const fill=$('tankFill'),bar=$('levelBar');fill.style.height=p+'%';bar.style.width=p+'%';const col=p<20?'#ff4d4d':(p<40?'#ffad33':'#42d65b');fill.style.background=col;bar.style.background=col;$('updated').textContent='Letzte Aktualisierung: '+(d.time||new Date().toLocaleTimeString('de-DE'))}
 function setPeriod(n){period=Number(n);document.querySelectorAll('.periodBtn').forEach(b=>b.classList.toggle('active',Number(b.dataset.period)===period));loadHistory()}
 document.querySelectorAll('.periodBtn').forEach(b=>b.onclick=()=>setPeriod(b.dataset.period));
 function draw(){const c=$('chart'),tip=$('tip');if(!c)return;const r=c.getBoundingClientRect(),dpr=Math.max(1,devicePixelRatio||1),w=Math.max(320,Math.floor(r.width)),h=Math.floor(r.height);c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);const pl=42,pr=12,pt=18,pb=28,iw=w-pl-pr,ih=h-pt-pb;if(!items.length){x.fillStyle='#777';x.fillText('Keine Verlaufsdaten vorhanden',pl,pt+20);return}const ts=items.map(a=>a.time),t0=Math.min.apply(null,ts);let t1=Math.max.apply(null,ts);if(t1<=t0)t1=t0+86400000;const px=t=>pl+((t-t0)/(t1-t0))*iw,py=p=>pt+ih-(Math.max(0,Math.min(100,p))/100)*ih;x.strokeStyle='#333';[0,25,50,75,100].forEach(v=>{const y=py(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillStyle='#777';x.font='10px Arial';x.fillText(v+'%',5,y+3)});const sampleDays=period>365?Math.max(1,Math.ceil(period/400)):1,maxLineGap=Math.max(129600000,sampleDays*86400000*1.75);x.beginPath();items.forEach((a,i)=>{const q=px(a.time),y=py(a.percent),gap=i?(a.time-items[i-1].time):0;(i&&gap<=maxLineGap)?x.lineTo(q,y):x.moveTo(q,y)});x.strokeStyle='#4da6ff';x.lineWidth=2;x.stroke();const maxC=Math.max.apply(null,[1].concat(items.map(a=>Number(a.consumedLiters)||0)));items.forEach(a=>{const q=px(a.time),y=py(a.percent),bh=((Number(a.consumedLiters)||0)/maxC)*(ih*.35);x.fillStyle='#ffb52e';x.fillRect(q-1,pt+ih-bh,2,bh);const src=Number(a.source)||0;x.fillStyle=src===1?'#ffd166':(src===2?'#ff6b6b':'#4da6ff');x.beginPath();if(src===1){x.arc(q,y,4,0,Math.PI*2);x.strokeStyle=x.fillStyle;x.lineWidth=2;x.stroke()}else if(src===2){x.moveTo(q,y-4);x.lineTo(q+4,y+4);x.lineTo(q-4,y+4);x.closePath();x.fill()}else{x.arc(q,y,3,0,Math.PI*2);x.fill()}if(Number(a.refillLiters)>0){x.fillStyle='#42d65b';x.beginPath();x.arc(q,pt+ih-6,5,0,Math.PI*2);x.fill()}});x.fillStyle='#777';x.font='10px Arial';[0,.5,1].forEach(f=>{const d=new Date(t0+f*(t1-t0));x.fillText(d.toLocaleDateString('de-DE',{month:'2-digit',year:'2-digit'}),Math.max(pl,Math.min(w-45,px(t0+f*(t1-t0))-18)),h-6)});geom={t0,t1,px}}
@@ -203,7 +214,9 @@ bool parseI2CAddress(const String &input, uint8_t &address) {
 void handleSettings() {
 
   String html = pageHeader("Einstellungen");
-  html.reserve(26000);
+  // Die Seite ist aktuell knapp 13 KB gross. Eine deutlich groessere Reserve
+  // bindet auf dem ESP32-C3 unnoetig Heap, solange die Antwort gesendet wird.
+  html.reserve(16000);
 
   html += R"HTML(
 <style>
@@ -320,7 +333,7 @@ void handleSettings() {
 <input type='number' step='0.25' min='-12' max='14' name='timezoneHours' value=')HTML";
   html += String((float)cfg.timezoneOffset / 3600.0f, 2);
   html += R"HTML('>
-<span class='settingsHelp'>Deutschland: im Winter UTC+1, im Sommer UTC+2. Die NTP-Sommerzeitlogik kann später erweitert werden.</span>
+<span class='settingsHelp'>Fester UTC-Offset ohne automatische Sommer-/Winterzeit. Deutschland: Winter UTC+1, Sommer UTC+2.</span>
 </div>
 
 <div class='settingsBlock'>
@@ -414,7 +427,7 @@ void handleSettings() {
 <input type='text' name='vlAddress' maxlength='4' pattern='0[xX][0-9A-Fa-f]{1,2}' value=')HTML";
   html += formatI2CAddress(cfg.vlAddress);
   html += R"HTML('>
-<label>BME280 I²C-Adresse</label>
+<label>BME280/BMP280 I²C-Adresse</label>
 <input type='text' name='bmeAddress' maxlength='4' pattern='0[xX][0-9A-Fa-f]{1,2}' value=')HTML";
   html += formatI2CAddress(cfg.bmeAddress);
   html += R"HTML('>
@@ -823,6 +836,8 @@ void handleStatus() {
   html += "<tr><th>Firmware</th><td>" + String(FW_VERSION) + "</td></tr>";
   html += "<tr><th>WLAN</th><td>" + String(WiFi.status() == WL_CONNECTED ? "verbunden" : "getrennt") + "</td></tr>";
   html += "<tr><th>MQTT</th><td>" + String(mqttClient.connected() ? "verbunden" : "getrennt") + "</td></tr>";
+  html += "<tr><th>DS3231</th><td>" + String(rtcAvailable() ? (rtcHasValidTime() ? "vorhanden / gueltig" : "vorhanden / Zeit ungueltig") : "nicht vorhanden") + "</td></tr>";
+  html += "<tr><th>Zeitquelle</th><td>" + String(activeTimeSource()) + "</td></tr>";
   html += "<tr><th>Füllstand</th><td>" + String(tankPercent, 1) + " %</td></tr>";
   html += "<tr><th>Liter</th><td>" + String(tankLiters, 1) + " L</td></tr>";
   html += "<tr><th>Temperatur</th><td>" + String(temperature, 1) + " °C</td></tr>";
@@ -853,7 +868,7 @@ void handleStatus() {
 
 void handleApiPing() {
   String json;
-  json.reserve(256);
+  json.reserve(448);
 
   json += "{";
   json += "\"ok\":true,";
@@ -873,7 +888,34 @@ void handleApiPing() {
   json += String(WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0);
   json += ",";
   json += "\"ntp_synced\":";
+  json += (ntpHasSynced() ? "true" : "false");
+  json += ",";
+  json += "\"rtc_present\":";
+  json += (rtcAvailable() ? "true" : "false");
+  json += ",";
+  json += "\"rtc_valid\":";
+  json += (rtcHasValidTime() ? "true" : "false");
+  json += ",";
+  json += "\"time_source\":\"";
+  json += activeTimeSource();
+  json += "\",";
+  json += "\"system_time_valid\":";
   json += (time(nullptr) >= 1000000000UL ? "true" : "false");
+  json += ",";
+  json += "\"heap_free\":";
+  json += String(ESP.getFreeHeap());
+  json += ",";
+  json += "\"heap_min\":";
+  json += String(ESP.getMinFreeHeap());
+  json += ",";
+  json += "\"heap_largest\":";
+  json += String(ESP.getMaxAllocHeap());
+  json += ",";
+  json += "\"wifi_disconnect_events\":";
+  json += String((uint32_t)wifiDisconnectEventCount);
+  json += ",";
+  json += "\"web_rebinds\":";
+  json += String(webServerRebindCount);
   json += "}";
 
   server->send(200, "application/json", json);
@@ -913,6 +955,8 @@ void handleSystemStatusPage() {
   html += "<div class='metric-card'><h3>Neustarts gesamt</h3><div>"+String(persistentRestartCount)+"</div><small>Persistent gespeichert</small></div>";
   html += "<div class='metric-card'><h3>Sensor-Reinitialisierungen</h3><div>"+String(sensorReinitCount)+"</div><small>Seit Boot</small></div>";
   html += "<div class='metric-card'><h3>WLAN-Reconnects</h3><div>"+String(wifiReconnectCountSinceBoot)+"</div><small>Seit Boot, Erstverbindung nicht gezaehlt</small></div>";
+  html += "<div class='metric-card'><h3>WLAN-Linkabbrueche</h3><div>"+String((uint32_t)wifiDisconnectEventCount)+"</div><small>Ereignisse seit Boot</small></div>";
+  html += "<div class='metric-card'><h3>Web-Rebinds</h3><div>"+String(webServerRebindCount)+"</div><small>Nach WLAN-Linkabbruch</small></div>";
   html += "<div class='metric-card'><h3>MQTT-Reconnects</h3><div>"+String(mqttReconnectCountSinceBoot)+"</div><small>Seit Boot, Erstverbindung nicht gezaehlt</small></div>";
   html += "<div class='metric-card'><h3>Display-Taste</h3><div>GPIO "+String(displayButtonPin)+"</div></div>";
   html += "<div class='metric-card'><h3>Flash</h3><div>"+String(ESP.getFlashChipSize()/1024.0f/1024.0f,1)+" MB</div></div>";
@@ -921,9 +965,11 @@ void handleSystemStatusPage() {
   html += "<div class='metric-card'><h3>SPIFFS</h3><div>"+String(SPIFFS.totalBytes()/1024.0f,1)+" / "+String(SPIFFS.usedBytes()/1024.0f,1)+" KB</div></div>";
   html += "<div class='metric-card'><h3>WLAN</h3><div>"; html += (WiFi.status()==WL_CONNECTED ? "Verbunden" : "Fehler"); html += "</div></div>";
   html += "<div class='metric-card'><h3>MQTT</h3><div>"; html += (mqttClient.connected() ? "Verbunden" : "Offline"); html += "</div></div>";
+  html += "<div class='metric-card'><h3>DS3231</h3><div>"; html += (rtcAvailable() ? (rtcHasValidTime() ? "Bereit" : "Zeit ungueltig") : "Nicht vorhanden"); html += "</div><small>Optional, I2C 0x68</small></div>";
+  html += "<div class='metric-card'><h3>Zeitquelle</h3><div>"+String(activeTimeSource())+"</div><small>NTP synchronisiert: "+String(ntpHasSynced() ? "ja" : "nein")+"</small></div>";
   html += "<div class='metric-card'><h3>Home Assistant</h3><div>MQTT Discovery</div><small>Discovery-Prefix: homeassistant</small></div>";
   html += "<div class='metric-card'><h3>ToF</h3><div>"; html += String(sensorName()); html += " / "; html += (vlOK ? "OK" : "Fehler"); html += "</div></div>";
-  html += "<div class='metric-card'><h3>BME280</h3><div>"; html += (bmeOK ? "OK" : "Fehler"); html += "</div></div>";
+  html += "<div class='metric-card'><h3>Umweltsensor</h3><div>"; html += (bmeOK ? environmentSensorName() : "Fehler"); html += "</div></div>";
   html += "<div class='metric-card'><h3>Historie</h3><div>10 Jahre / 3650 Tage</div></div>";
   html += "<div class='metric-card'><h3>OTA</h3><div>Bereit</div></div>";
   html += "</div></div>";
@@ -1969,7 +2015,7 @@ void handleHistoryPage(){
 <div class='card'><h2>Analyse & Statistik</h2><div class='grid2'><div class='metric-card'><h3>Aktueller Monat</h3><div id='amCons'>-- L</div></div><div class='metric-card'><h3>Aktuelles Jahr</h3><div id='ayCons'>-- L</div></div><div class='metric-card'><h3>Ø Verbrauch / Tag</h3><div id='avgDay'>-- L</div><small>über verfügbare Historie</small></div><div class='metric-card'><h3>Vorjahr bis heute</h3><div id='prevYearCons'>-- L</div></div><div class='metric-card'><h3>Jahresvergleich</h3><div id='yearDelta'>--</div><small>gleicher Zeitraum wie aktuelles Jahr</small></div><div class='metric-card'><h3>Langzeittrend</h3><div id='trendText'>--</div><small>auf Basis der letzten vollständigen Jahre</small></div></div></div>
 
 <div class='card'><h2>Verlaufsdaten</h2><div class='linkrow'><a class='btn' href='/history/import'>📥 CSV importieren</a><a class='btn' href='/history.csv?days=183'>CSV ½ Jahr</a><a class='btn' href='/history.csv?days=365'>CSV 1 Jahr</a><a class='btn' href='/history.csv?days=1825'>CSV 5 Jahre</a><a class='btn' href='/history.csv?days=3650'>CSV 10 Jahre</a></div></div>)HTML";
-  html+=R"HTML(<script>(function(){const c=document.getElementById('hc'),t=document.getElementById('ht');let days=365,items=[],g=null;const f=v=>Number.isFinite(Number(v))?Number(v).toFixed(1):'--';function draw(){const r=c.getBoundingClientRect(),w=Math.max(320,Math.floor(r.width)),h=Math.floor(r.height),dpr=Math.max(1,devicePixelRatio||1);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);if(!items.length)return;const pl=42,pr=10,pt=15,pb=28,iw=w-pl-pr,ih=h-pt-pb,t0=items[0].time;let t1=items[items.length-1].time;if(t1<=t0)t1=t0+86400000;const px=z=>pl+(z-t0)/(t1-t0)*iw,py=p=>pt+ih-Math.max(0,Math.min(100,p))/100*ih;x.strokeStyle='#333';[0,25,50,75,100].forEach(v=>{let y=py(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillStyle='#777';x.font='10px Arial';x.fillText(v+'%',4,y+3)});const sampleDays=days>365?Math.max(1,Math.ceil(days/400)):1,maxLineGap=Math.max(129600000,sampleDays*86400000*1.75);x.beginPath();items.forEach((a,i)=>{let q=px(a.time),y=py(a.percent),gap=i?(a.time-items[i-1].time):0;(i&&gap<=maxLineGap)?x.lineTo(q,y):x.moveTo(q,y)});x.strokeStyle='#4da6ff';x.lineWidth=2;x.stroke();let mc=Math.max(1,...items.map(a=>a.consumedLiters||0));items.forEach(a=>{let q=px(a.time),bh=(a.consumedLiters/mc)*ih*.32;x.fillStyle='#ffb52e';x.fillRect(q-1,pt+ih-bh,2,bh);const src=Number(a.source)||0;x.fillStyle=src===1?'#ffd166':(src===2?'#ff6b6b':'#4da6ff');x.beginPath();if(src===1){x.arc(q,py(a.percent),4,0,Math.PI*2);x.strokeStyle=x.fillStyle;x.lineWidth=2;x.stroke()}else if(src===2){x.moveTo(q,py(a.percent)-4);x.lineTo(q+4,py(a.percent)+4);x.lineTo(q-4,py(a.percent)+4);x.closePath();x.fill()}else{x.arc(q,py(a.percent),2.7,0,Math.PI*2);x.fill()}if(a.refillLiters>0){x.fillStyle='#42d65b';x.beginPath();x.arc(q,pt+ih-5,5,0,Math.PI*2);x.fill()}});g={t0,t1,px}}
+  html+=R"HTML(<script>(function(){const c=document.getElementById('hc'),t=document.getElementById('ht');let days=365,items=[],g=null;const f=v=>(v!==null&&v!==''&&Number.isFinite(Number(v)))?Number(v).toFixed(1):'--';function draw(){const r=c.getBoundingClientRect(),w=Math.max(320,Math.floor(r.width)),h=Math.floor(r.height),dpr=Math.max(1,devicePixelRatio||1);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);if(!items.length)return;const pl=42,pr=10,pt=15,pb=28,iw=w-pl-pr,ih=h-pt-pb,t0=items[0].time;let t1=items[items.length-1].time;if(t1<=t0)t1=t0+86400000;const px=z=>pl+(z-t0)/(t1-t0)*iw,py=p=>pt+ih-Math.max(0,Math.min(100,p))/100*ih;x.strokeStyle='#333';[0,25,50,75,100].forEach(v=>{let y=py(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillStyle='#777';x.font='10px Arial';x.fillText(v+'%',4,y+3)});const sampleDays=days>365?Math.max(1,Math.ceil(days/400)):1,maxLineGap=Math.max(129600000,sampleDays*86400000*1.75);x.beginPath();items.forEach((a,i)=>{let q=px(a.time),y=py(a.percent),gap=i?(a.time-items[i-1].time):0;(i&&gap<=maxLineGap)?x.lineTo(q,y):x.moveTo(q,y)});x.strokeStyle='#4da6ff';x.lineWidth=2;x.stroke();let mc=Math.max(1,...items.map(a=>a.consumedLiters||0));items.forEach(a=>{let q=px(a.time),bh=(a.consumedLiters/mc)*ih*.32;x.fillStyle='#ffb52e';x.fillRect(q-1,pt+ih-bh,2,bh);const src=Number(a.source)||0;x.fillStyle=src===1?'#ffd166':(src===2?'#ff6b6b':'#4da6ff');x.beginPath();if(src===1){x.arc(q,py(a.percent),4,0,Math.PI*2);x.strokeStyle=x.fillStyle;x.lineWidth=2;x.stroke()}else if(src===2){x.moveTo(q,py(a.percent)-4);x.lineTo(q+4,py(a.percent)+4);x.lineTo(q-4,py(a.percent)+4);x.closePath();x.fill()}else{x.arc(q,py(a.percent),2.7,0,Math.PI*2);x.fill()}if(a.refillLiters>0){x.fillStyle='#42d65b';x.beginPath();x.arc(q,pt+ih-5,5,0,Math.PI*2);x.fill()}});g={t0,t1,px}}
 c.onmousemove=e=>{if(!g||!items.length)return;let mx=e.offsetX,best=null,bd=1e9;items.forEach(a=>{let q=Math.abs(g.px(a.time)-mx);if(q<bd){bd=q;best=a}});if(!best||bd>25){t.style.display='none';return}let d=new Date(best.time);const srcName=Number(best.source)===1?'Import':(Number(best.source)===2?'Test':'Gemessen');t.innerHTML='<b>'+d.toLocaleDateString('de-DE')+'</b><br>Füllstand: '+f(best.percent)+' %<br>'+f(best.liters)+' L<br>Verbrauch: '+f(best.consumedLiters)+' L<br>Quelle: '+srcName+(best.refillLiters>0?'<br><span style="color:#42d65b">Nachfüllung: +'+f(best.refillLiters)+' L</span>':'');t.style.display='block';t.style.left=Math.min(c.clientWidth-185,Math.max(5,mx+12))+'px';t.style.top='10px'};c.onmouseleave=()=>t.style.display='none';async function loadRecentRefills(){const box=document.getElementById('recentRefills');try{const r=await fetch('/api/recent-refills?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();const a=j.items||[];if(!a.length){box.innerHTML='<p class="muted">Keine Nachfüllvorgänge vorhanden.</p>';return}let h='<table><tr><th>Datum</th><th>Menge</th><th>Füllstand danach</th></tr>';a.forEach(v=>{h+='<tr><td>'+v.date+'</td><td>+'+f(v.liters)+' L</td><td>'+((v.percent===null||v.percent===undefined)?'--':f(v.percent)+' %')+'</td></tr>'});h+='</table>';box.innerHTML=h}catch(e){box.innerHTML='<p class="muted">Nachfüllvorgänge konnten nicht geladen werden.</p>'}};async function load(n){days=n;document.querySelectorAll('.periodBtn').forEach(a=>a.classList.toggle('active',Number(a.dataset.days)===days));try{let r=await fetch('/api/history?days='+days+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);let raw=await r.text(),j;try{j=JSON.parse(raw)}catch(e){throw new Error('Ungültiges JSON: '+raw.substring(0,160))}items=j.items||[];document.getElementById('sd').textContent=days+' Tage';const z=j.stats||{};document.getElementById('sc').textContent=f(z.consumptionLiters)+' L';document.getElementById('sr').textContent=f(z.refillLiters)+' L';document.getElementById('sl').textContent=(Number.isFinite(Number(z.minPercent))&&Number.isFinite(Number(z.maxPercent)))?f(z.minPercent)+'–'+f(z.maxPercent)+' %':'--';draw()}catch(e){items=[];draw();document.getElementById('sd').textContent='Fehler';document.getElementById('sc').textContent='--';document.getElementById('sr').textContent='--';document.getElementById('sl').textContent=e.message}}function drawMonthChart(){const md=window.__monthData;if(!md)return;const c=document.getElementById('monthChart'),tip=document.getElementById('monthTip'),leg=document.getElementById('monthLegend');if(!c)return;const n=Math.max(1,Math.min(10,Number(document.getElementById('yearCount')?.value||5))),ys=md.ys.slice(-n),r=c.getBoundingClientRect(),w=Math.max(360,Math.floor(r.width)),h=Math.max(280,Math.floor(r.height)),dpr=Math.max(1,devicePixelRatio||1);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);const pl=46,pr=12,pt=18,pb=36,iw=w-pl-pr,ih=h-pt-pb;let maxV=1;for(const y of ys)for(let m=1;m<=12;m++)maxV=Math.max(maxV,md.net(md.monthly[y]?.[m]));const gy=v=>pt+ih-(v/maxV)*ih;x.strokeStyle='#333';x.fillStyle='#777';x.font='10px Arial';for(let i=0;i<=4;i++){const v=maxV*i/4,y=gy(v);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.fillText(Math.round(v)+' L',4,y+3)}const groupW=iw/12,barGap=2,barW=Math.max(2,(groupW-8)/Math.max(1,ys.length));const palette=['#4da6ff','#ffb52e','#42d65b','#c77dff','#ff6b6b','#00c2d1','#ffd166','#8ac926','#f72585','#9aa0a6'];const rects=[];for(let m=1;m<=12;m++){const gx=pl+(m-1)*groupW;x.fillStyle='#aaa';x.font='10px Arial';x.fillText(md.names[m],gx+2,h-10);ys.forEach((y,j)=>{const v=md.net(md.monthly[y]?.[m]),bh=(v/maxV)*ih,bx=gx+4+j*barW,by=pt+ih-bh;x.fillStyle=palette[j%palette.length];x.fillRect(bx,by,Math.max(1,barW-barGap),bh);rects.push({x:bx,y:by,w:Math.max(1,barW-barGap),h:bh,year:y,month:md.names[m],value:v,color:palette[j%palette.length]})})}leg.innerHTML=ys.map((y,j)=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:4px 14px 4px 0"><span style="display:inline-block;width:18px;height:12px;background:'+palette[j%palette.length]+';border-radius:2px;border:1px solid rgba(255,255,255,.35)"></span><b>Jahr '+y+'</b></span>').join('');c.onmousemove=e=>{const rr=c.getBoundingClientRect(),mx=e.clientX-rr.left,my=e.clientY-rr.top;let hit=null;for(const q of rects){if(mx>=q.x&&mx<=q.x+q.w&&my>=q.y&&my<=q.y+q.h){hit=q;break}}if(!hit){tip.style.display='none';return}tip.innerHTML='<b>'+hit.month+' '+hit.year+'</b><br>Verbrauch: '+f(hit.value)+' L';tip.style.display='block';tip.style.left=Math.min(c.clientWidth-170,Math.max(5,mx+12))+'px';tip.style.top=Math.max(5,my-20)+'px'};c.onmouseleave=()=>tip.style.display='none'}document.getElementById('yearCount')?.addEventListener('change',drawMonthChart);async function loadAnalysis(){try{const r=await fetch('/history.csv?days=3650&ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const raw=await r.text(),lines=raw.split(/\r?\n/).filter(Boolean),a=[];for(let i=1;i<lines.length;i++){const p=lines[i].split(';');if(p.length<5)continue;const dm=p[0].split('.');if(dm.length!==3)continue;const d=new Date(Number(dm[2]),Number(dm[1])-1,Number(dm[0]),12,0,0);const liters=Number(String(p[1]).replace(',','.')),cons=Number(String(p[3]).replace(',','.')),refill=Number(String(p[4]).replace(',','.'));if(!Number.isFinite(liters)||!Number.isFinite(d.getTime()))continue;a.push({time:d.getTime(),liters,consumedLiters:Number.isFinite(cons)?cons:0,refillLiters:Number.isFinite(refill)?refill:0})}a.sort((x,y)=>x.time-y.time);const monthly={},yearly={},years=new Set(),daysPerYear={};function mk(){return{cons:0,refill:0,days:0}}function add(q,v){const end=Number(v.liters),rf=Math.max(0,Number(v.refillLiters)||0),dc=Math.max(0,Number(v.consumedLiters)||0);if(!Number.isFinite(end))return;q.cons+=dc;q.refill+=rf;q.days++}let prevEnd=null;for(const v of a){const d=new Date(v.time),y=d.getFullYear(),m=d.getMonth()+1;years.add(y);daysPerYear[y]=(daysPerYear[y]||0)+1;monthly[y]??={};monthly[y][m]??=mk();yearly[y]??=mk();add(monthly[y][m],v);add(yearly[y],v);const e=Number(v.liters);if(Number.isFinite(e))prevEnd=e}function net(q){return q&&q.days?Math.max(0,Number(q.cons)||0):0}const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;document.getElementById('amCons').textContent=f(net(monthly[cy]?.[cm]))+' L';document.getElementById('ayCons').textContent=f(net(yearly[cy]))+' L';let all=mk();for(const v of a){add(all,v);}document.getElementById('avgDay').textContent=f(all.days?net(all)/all.days:0)+' L';function ytd(year){let q=mk();for(const v of a){const d=new Date(v.time);if(d.getFullYear()===year&&d.getMonth()<=now.getMonth()&&(d.getMonth()<now.getMonth()||d.getDate()<=now.getDate()))add(q,v)}return net(q)}const curYtd=ytd(cy),prevYtd=ytd(cy-1);document.getElementById('prevYearCons').textContent=f(prevYtd)+' L';document.getElementById('yearDelta').textContent=prevYtd>0?((curYtd-prevYtd)/prevYtd*100).toFixed(1)+' %':'--';const ys=[...years].sort((a,b)=>a-b),complete=ys.filter(y=>y<cy&&(daysPerYear[y]||0)>=330).slice(-4);let trend='--';if(complete.length>=2){const first=net(yearly[complete[0]]),last=net(yearly[complete[complete.length-1]]);if(first>0){const pct=(last-first)/first*100;trend=(pct>5?'steigend':(pct<-5?'fallend':'stabil'))+' ('+(pct>=0?'+':'')+pct.toFixed(1)+' %)'}}document.getElementById('trendText').textContent=trend;const names=['','Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];let h='<tr><th>Monat</th>'+ys.map(y=>'<th>'+y+'</th>').join('')+'</tr>';for(let m=1;m<=12;m++){h+='<tr><th>'+names[m]+'</th>'+ys.map(y=>'<td>'+f(net(monthly[y]?.[m]))+'</td>').join('')+'</tr>'}h+='<tr><th>Jahr gesamt</th>'+ys.map(y=>'<td><b>'+f(net(yearly[y]))+'</b></td>').join('')+'</tr>';document.getElementById('monthCompare').innerHTML=h;window.__monthData={ys,monthly,net,names};drawMonthChart()}catch(e){document.getElementById('monthCompare').innerHTML='<tr><td>Analyse konnte nicht geladen werden: '+e.message+'</td></tr>'}}document.querySelectorAll('.periodBtn').forEach(a=>a.onclick=e=>{e.preventDefault();load(Number(a.dataset.days))});load(365);loadRecentRefills();loadAnalysis();addEventListener('resize',()=>{draw();drawMonthChart()})})();</script>)HTML";
   html+=pageFooter();sendLocalizedHtml(200, html);
 }
@@ -3932,7 +3978,7 @@ void serialDebugTask() {
   Serial.print(F("Sensor-Reinit: "));
   Serial.println(sensorReinitCount);
 
-  serialPrintSensorStatus(F("BME: "), bmeOK);
+  serialPrintSensorStatus(F("BME/BMP: "), bmeOK);
   serialPrintSensorStatus(F("OLED: "), oledOK);
 
   Serial.print(F("Messungen: "));

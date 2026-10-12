@@ -1,6 +1,6 @@
 # Fuellstandsmesser3 – Architektur
 
-Stand: 14.09.2026, Firmware V7.3.8
+Stand: 12.10.2026, Firmware V7.4.0
 
 ## Ziel
 
@@ -13,21 +13,22 @@ unverändert.
 
 | Datei | Verantwortung |
 |---|---|
-| `Fuellstandsmesser3_V7.3.8.ino` | Arduino-Einstieg, bindet die App-Schnittstelle ein |
+| `Fuellstandsmesser3_V7.4.0.ino` | Arduino-Einstieg, bindet die App-Schnittstelle ein |
 | `Fuellstandsmesser3_App.h` | öffentliche Einstiegsschnittstelle (`setup`, `loop`) |
 | `Fuellstandsmesser3_App.cpp` | gemeinsame Includes, Zustand, Datentypen und Unity-Einbindung |
 | `Config.h/.cpp` | Defaults, Validierung und persistente Konfiguration |
-| `DisplayAndSensors.h/.cpp` | LED, I2C-Scan, OLED und BME280 |
-| `MeasurementAndSensors.h/.cpp` | ToF-Sensoren, Filter, Tankberechnung und Messzyklus |
+| `DisplayAndSensors.h/.cpp` | LED, I2C-Scan und OLED |
+| `MeasurementAndSensors.h/.cpp` | ToF-, BME280-/BMP280-Sensoren, Filter, Tankberechnung und Messzyklus |
 | `Mqtt.h/.cpp` | MQTT, JSON und Home-Assistant-Discovery |
 | `NetworkServices.h/.cpp` | WLAN-nahe Dienste, mDNS, NTP und OTA |
+| `Rtc.h/.cpp` | Optionale DS3231-Erkennung, RTC-Fallback und NTP-Synchronisation |
 | `WebServerModule.h/.cpp` | Weboberfläche, APIs, Historie, CSV und Web-OTA |
 | `Runtime.h/.cpp` | Diagnose, Sensor-Recovery, `setup()` und `loop()` |
 | `Fuellstandsmesser3_Formatting.cpp/.h` | HTML-/JSON-Formatierung und Taupunkt |
 
 ## Buildmodell
 
-Die sieben Fachdateien werden von `Fuellstandsmesser3_App.cpp` als Unity-Einheit
+Die Firmwaremodule werden von `Fuellstandsmesser3_App.cpp` als Unity-Einheit
 eingebunden. Jede Fachdatei ist zusätzlich mit
 `FUELLSTANDSMESSER3_UNITY_BUILD` geschützt. Dadurch bleiben die Dateien im
 Sketch sichtbar und einzeln wartbar, während Arduino sie nicht zusätzlich als

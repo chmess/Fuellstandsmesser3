@@ -3,7 +3,7 @@
 
 /*
 ===============================================================================
- FUELLSTANDSMESSER3 V7.3.8
+ FUELLSTANDSMESSER3 V7.4.0
  ESP32-C3 Super Mini | 4 MB Flash | Minimal SPIFFS (Large APPS with OTA)
 ===============================================================================
 
@@ -11,7 +11,8 @@ ZWECK
  Heizöl-/Tank-Füllstandsmesser für einen geschlossenen Tank.
  Die Firmware misst den Abstand zur Flüssigkeitsoberfläche per ToF/LiDAR und
  berechnet daraus Füllstand in Millimetern, Prozent und Litern. Zusätzlich
- werden Verbrauch, Nachfüllereignisse, BME280-Umgebungsdaten, Taupunkt,
+ werden Verbrauch, Nachfüllereignisse, BME280-/BMP280-Umgebungsdaten,
+ optionale DS3231-Zeithaltung,
  Historie und Systemdiagnose bereitgestellt.
 
 PROJEKTPARAMETER / ARDUINO IDE
@@ -30,7 +31,8 @@ HARDWARE / PINS / I2C
  - Display-/BOOT-Taste: standardmäßig GPIO9, in Einstellungen konfigurierbar
  - Onboard-Status-LED: GPIO8
  - OLED SSD1306 128x64: I2C 0x3C
- - BME280: I2C 0x76
+ - BME280 oder BMP280: I2C 0x76
+ - DS3231 (optional): I2C 0x68; zugehöriges AT24C32 typischerweise 0x57
  - ToF/LiDAR: Standardadresse I2C 0x29
 
 TOF-SENSOREN
@@ -44,12 +46,13 @@ TOF-SENSOREN
  I2C-Bus vorhanden, wird der Recovery-Versuch ohne blockierende Initialisierung
  übersprungen. Hot-Plug des ToF wurde mit VL53L0X erfolgreich getestet.
 
-BME280
- - Temperatur, relative Luftfeuchte und Luftdruck
- - Taupunkt lokal per Magnus-Approximation
+BME280 / BMP280
+ - automatische Erkennung über die Chip-ID an der konfigurierten Adresse
+ - BME280: Temperatur, relative Luftfeuchte, Luftdruck und Taupunkt
+ - BMP280: Temperatur und Luftdruck; Feuchte/Taupunkt bleiben bewusst leer
  - Plausibilitätsprüfung vor Übernahme der Messwerte:
    Temperatur -40..85 °C, Feuchte 0..100 %, Luftdruck 300..1100 hPa
- - Ungültige BME-Werte werden verworfen und nicht als neue Messwerte an
+ - Ungültige Umweltwerte werden verworfen und nicht als neue Messwerte an
    Weboberfläche, MQTT oder Home Assistant weitergegeben.
  - Für das OLED ist kein Hot-Plug-Recovery vorgesehen; nach Ab-/Anstecken kann
    ein Neustart erforderlich sein.
@@ -61,7 +64,7 @@ MESSUNG / FILTER / KALIBRIERUNG
  - Berechnung aus Leer-/Voll-Abstand
  - Erkennung und Speicherung von Nachfüllereignissen
  - Verbrauchsberechnung aus Tages-/Füllstandsänderungen
- - Messbetrieb bleibt bei WLAN-, MQTT- oder NTP-Problemen funktionsfähig.
+ - Messbetrieb bleibt bei WLAN-, MQTT-, NTP- oder RTC-Problemen funktionsfähig.
 
 VERBRAUCH / HISTORIE
  - Tageswerte: Endfüllstand, Verbrauch, Nachfüllmenge und Datenquelle
@@ -99,9 +102,9 @@ OLED
  1. Datum/Uhrzeit, Füllstand, Liter, Prozent
  2. Verbrauch
  3. ToF-Sensor
- 4. BME280 und Taupunkt
+ 4. BME280/BMP280 und Taupunkt (soweit vom Sensor unterstützt)
  5. WLAN/MQTT
- 6. NTP/Zeit
+ 6. RTC/NTP/Zeit
  Die Display-Taste ist separat persistent konfigurierbar; Standard GPIO9.
  Status-LED GPIO8 arbeitet entsprechend der Firmwarelogik.
 
@@ -109,7 +112,7 @@ WEBINTERFACE
  - Browser-Favicon mit Tankmotiv direkt aus der Firmware
  - Dashboard zeigt zusätzlich den Tankfaktor in Liter/mm
  - Dashboard mit Füllstand, Litern, Prozent, Verbrauch, Verlauf,
-   Sensorstatus, BME280/Taupunkt sowie WLAN-/MQTT-Status
+   Sensorstatus, Umweltsensor, RTC sowie WLAN-/MQTT-Status
  - Historie und grafischer Monatsvergleich
  - Einstellungen und Kalibrierung
  - System-/Health-Diagnose
@@ -137,13 +140,18 @@ MQTT
 HOME ASSISTANT
  - MQTT Discovery über konfigurierbaren Discovery-Prefix
  - Discovery u.a. für Tankinhalt, Prozent, Abstand, Verbrauch,
-   Nachfüllung, WLAN, Uptime, System-Health, Sensortyp sowie BME280-Werte
+   Nachfüllung, WLAN, Uptime, System-Health, Sensortyp sowie Umweltwerte
  - interne Alarme und Verbrauchsprognosen sind nicht vorgesehen;
    weitergehende Auswertung erfolgt extern.
 
-ZEIT / NTP
+ZEIT / NTP / RTC
  - konfigurierbarer fester UTC-Offset
  - automatische NTP-Synchronisation
+ - optionale DS3231 an I2C 0x68; gültige RTC-Zeit wird beim Start übernommen
+ - bestätigte NTP-Zeit wird zurück in die DS3231 geschrieben
+ - RTC-Erkennung, Zeitgültigkeit und aktive Zeitquelle stehen in Web/API bereit
+ - fehlende oder ungültige RTC blockiert weder Start noch Messbetrieb
+ - das optionale AT24C32-EEPROM wird derzeit nicht beschrieben
  - NTP blockiert den Messbetrieb nicht
  - vor gültiger Zeitsynchronisation werden keine erfundenen Zeitstempel
    für die Historie verwendet.
@@ -180,9 +188,9 @@ DEBUG-STUFEN
 
 SOFTWARE / BIBLIOTHEKEN
  - ESP32 Arduino Core 3.3.11
- - Adafruit SSD1306 2.5.17
- - Adafruit GFX 1.12.6
- - Adafruit BME280 2.3.0
+ - Adafruit SSD1306 2.5.16
+ - Adafruit GFX 1.12.4
+ - Adafruit BME280 2.3.0 und Adafruit BMP280 2.6.8
  - Adafruit VL53L0X 1.2.5
  - Adafruit VL53L1X 3.1.2
  - SparkFun VL53L5CX Library
@@ -191,7 +199,16 @@ SOFTWARE / BIBLIOTHEKEN
    Update, ArduinoOTA, ESPmDNS und Zeit/NTP
  - Abhängigkeiten: Adafruit BusIO, Adafruit Unified Sensor
 
-STAND V7.3.8
+STAND V7.4.0
+ - Optionale DS3231-Unterstützung mit RTC-Startzeit, NTP-Rücksync und
+   fehlertolerantem Betrieb ohne RTC.
+ - BME280 und BMP280 werden anhand ihrer Chip-ID unterschieden; BMP280 liefert
+   erwartungsgemäß keine Feuchte und keinen Taupunkt.
+ - Dashboard, Systemansicht und JSON-API zeigen RTC-Status und Zeitquelle.
+ - VL53L0X-Messung und Sensor-Recovery arbeiten nichtblockierend; Webserver-
+   Timeout und Loop-Supervisor begrenzen festhängende Netzwerk-/Treiberaufrufe.
+ - 120 Einstellungsseiten-Aufrufe mit Heap-/Uptime-Prüfung ohne Fehler,
+   Neustart oder fallenden Heap-Trend bestanden.
  - 5-/10-Jahres-Charts auf maximal 400 Datenpunkte erhöht; Linienabstand entsprechend angepasst.
  - 5-/10-Jahres-Füllstandslinie repariert: die erlaubte Linienlücke richtet
    sich jetzt nach der zeitlichen Chart-Ausdünnung statt fest 1,5 Tage.
@@ -250,10 +267,13 @@ Preferences preferences;
 #include <SPIFFS.h>
 #include <Update.h>
 #include <time.h>
+#include <sys/time.h>
+#include <esp_sntp.h>
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
+#include <Adafruit_BMP280.h>
 #include <Adafruit_VL53L0X.h>
 #include <Adafruit_VL53L1X.h>
 #include <SparkFun_VL53L5CX_Library.h>
@@ -360,7 +380,7 @@ static bool historyStoreDirty=false, historySpiffsReady=false;
 
 #if defined(ESP_ARDUINO_VERSION_MAJOR)
   #if ESP_ARDUINO_VERSION_MAJOR < 3
-    #error "Fuellstandsmesser V7.3.8 requires ESP32 Arduino Core 3.x"
+    #error "Fuellstandsmesser V7.4.0 requires ESP32 Arduino Core 3.x"
   #endif
 #else
   #warning "ESP_ARDUINO_VERSION_MAJOR not available; verify ESP32 Arduino Core 3.x"
@@ -370,7 +390,7 @@ static bool historyStoreDirty=false, historySpiffsReady=false;
 // VERSION / NAME
 // ============================================================================
 
-#define FW_VERSION             "V7.3.8"
+#define FW_VERSION             "V7.4.0"
 #define DEVICE_NAME            "Fuellstandsmesser3"
 #define DEVICE_HOSTNAME        "Fuellstandsmesser3"
 #define DEFAULT_MQTT_TOPIC     "Fuellstandsmesser3"
@@ -421,6 +441,7 @@ static bool historyStoreDirty=false, historySpiffsReady=false;
 // Standard-I2C-Adressen der aktuellen Hardware
 #define VL_ADDRESS              0x29
 #define BME_ADDRESS             0x76
+#define RTC_ADDRESS             0x68
 
 // Status-LED und Display-/BOOT-Taste der aktuellen ESP32-C3-Hardware.
 // Sensor-/I2C-Pinbelegung: SDA GPIO4, SCL GPIO5.
@@ -448,6 +469,30 @@ esp_reset_reason_t bootResetReason = ESP_RST_UNKNOWN;
 // Langzeitdiagnose und Recovery-Zähler
 uint32_t persistentRestartCount = 0;
 uint32_t lowestLargestBlockSinceBoot = 0xFFFFFFFFUL;
+
+// Unabhaengiger Schutz gegen blockierende Netzwerk-/Treiberaufrufe. Da der
+// Webserver in der Arduino-loop laeuft, koennte diese sich sonst dauerhaft
+// festfahren, waehrend TCP Port 80 weiterhin Verbindungen annimmt.
+static constexpr uint32_t LOOP_STALL_RESTART_MS = 20000UL;
+static volatile uint32_t loopHeartbeatMs = 0;
+static TaskHandle_t loopSupervisorTaskHandle = nullptr;
+
+static void loopSupervisorTask(void *parameter) {
+  (void)parameter;
+
+  for (;;) {
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    const uint32_t heartbeat = loopHeartbeatMs;
+    if (heartbeat != 0 &&
+        (uint32_t)(millis() - heartbeat) > LOOP_STALL_RESTART_MS) {
+      Serial.println(F("[RECOVERY] Hauptschleife blockiert - Neustart"));
+      Serial.flush();
+      delay(50);
+      ESP.restart();
+    }
+  }
+}
 uint32_t lastMemoryDiagSampleMs = 0;
 static const uint32_t MEMORY_DIAG_SAMPLE_INTERVAL = 10000UL; // 10 s
 uint32_t wifiReconnectCountSinceBoot = 0;
@@ -584,9 +629,12 @@ static void updatePersistentRestartCount() {
 
 #define WIFI_CONNECT_TIMEOUT     15000UL
 #define WIFI_RECONNECT_INTERVAL  15000UL
+#define WIFI_DISCONNECT_GRACE     5000UL
+#define WEB_REBIND_STABLE_DELAY   2000UL
 #define WIFI_AP_STA_RETRY_INTERVAL 60000UL
 #define MQTT_RECONNECT_INTERVAL  10000UL
 #define MQTT_RECONNECT_MAX_INTERVAL 60000UL
+#define MQTT_NTP_STARTUP_GUARD   15000UL
 #define MQTT_SOCKET_TIMEOUT_SEC      2U
 #define MQTT_BUFFER_SIZE         4096U
 
@@ -707,6 +755,7 @@ Adafruit_SSD1306 display(
 );
 
 Adafruit_BME280 bme;
+Adafruit_BMP280 bmp(&Wire);
 
 Adafruit_VL53L0X vl53l0x;
 Adafruit_VL53L1X vl53l1x;
@@ -724,6 +773,22 @@ Config cfg;
 bool oledOK = false;
 bool vlOK = false;
 bool bmeOK = false;
+
+enum EnvironmentSensorType : uint8_t {
+  ENV_SENSOR_NONE = 0,
+  ENV_SENSOR_BME280,
+  ENV_SENSOR_BMP280
+};
+
+EnvironmentSensorType environmentSensorType = ENV_SENSOR_NONE;
+
+static const char* environmentSensorName() {
+  switch (environmentSensorType) {
+    case ENV_SENSOR_BME280: return "BME280";
+    case ENV_SENSOR_BMP280: return "BMP280";
+    default:                return "Keiner";
+  }
+}
 
 bool measurementValid = false;
 bool updateRunning = false;
@@ -744,6 +809,12 @@ uint32_t lastMqtt = 0;
 uint32_t lastOLED = 0;
 
 uint32_t lastWifiAttempt = 0;
+uint32_t wifiDisconnectedSince = 0;
+volatile bool wifiLinkDropObserved = false;
+volatile bool webServerRebindPending = false;
+volatile uint32_t webServerRebindRequestedAt = 0;
+volatile uint32_t wifiDisconnectEventCount = 0;
+uint32_t webServerRebindCount = 0;
 uint32_t lastApStaAttempt = 0;
 uint32_t lastMqttAttempt = 0;
 uint32_t mqttReconnectDelay = MQTT_RECONNECT_INTERVAL;
@@ -893,7 +964,7 @@ bool oledButtonHandled = false;
 
 #define OLED_PAGE_COUNT 8
 
-// V7.3.8: Fünffachklick auf die Display-Taste aktiviert kurz ein Easter Egg.
+// Fünffachklick auf die Display-Taste aktiviert kurz ein Easter Egg.
 uint8_t oledFastClickCount = 0;
 uint32_t oledFastClickWindowStart = 0;
 bool oledEasterEggActive = false;
@@ -1048,6 +1119,7 @@ static bool saveGeneratedCompactHistory(const CompactHistoryDay* data,
 #include "DisplayAndSensors.h"
 #include "MeasurementAndSensors.h"
 #include "Mqtt.h"
+#include "Rtc.h"
 #include "NetworkServices.h"
 #include "WebServerModule.h"
 #include "Runtime.h"
@@ -1056,6 +1128,7 @@ static bool saveGeneratedCompactHistory(const CompactHistoryDay* data,
 #include "DisplayAndSensors.cpp"
 #include "MeasurementAndSensors.cpp"
 #include "Mqtt.cpp"
+#include "Rtc.cpp"
 #include "NetworkServices.cpp"
 #include "WebServer.cpp"
 #include "Runtime.cpp"

@@ -1,36 +1,49 @@
-# Fuellstandsmesser3
+# Fuellstandsmesser3 V7.4.0
 
-**ESP32-C3 Tankmonitor mit ToF/LiDAR, OLED, BME280, MQTT, Home Assistant, OTA und 10-Jahres-Historie.**
+Ein robuster, eigenständiger Tankmonitor für den ESP32-C3: berührungslose
+Füllstandsmessung, OLED, Web-Dashboard, MQTT/Home Assistant, optionale DS3231
+und zehn Jahre lokale Historie.
 
-> Aktueller Stand: **V7.3.8** · Zielboard: **ESP32-C3 Super Mini** · Arduino Core: **3.3.11**
+![Dashboard V7.4.0](docs/screenshots/v7.4.0-dashboard.png)
 
-Fuellstandsmesser3 überwacht geschlossene Heizöl- und Flüssigkeitstanks berührungslos. Ein ToF-Sensor misst den Abstand zur Oberfläche; daraus berechnet die Firmware Füllhöhe, Prozent und Liter. Verbrauch, Nachfüllungen, Klimadaten und Systemzustand werden lokal angezeigt, im Flash gespeichert und über Web/MQTT bereitgestellt.
+## Was V7.4.0 auszeichnet
 
-## Stärken
+- **Optionale DS3231:** gültige RTC-Zeit steht schon vor WLAN/NTP bereit;
+  bestätigte NTP-Zeit wird zurück in die Uhr geschrieben.
+- **BME280 oder BMP280:** automatische Chip-Erkennung. Beim BMP280 bleiben
+  Feuchte und Taupunkt korrekt leer.
+- **Robuster VL53L0X-Betrieb:** kontinuierliche, nichtblockierende Messung und
+  begrenzte Recovery-Zugriffe.
+- **Überwachter Webserver:** Client-Timeout, Loop-Supervisor sowie Heap-,
+  Reset- und Reconnect-Diagnose.
+- **RTC im Dashboard:** grün bei gültiger Uhr, orange bei ungültiger Zeit und
+  grau, wenn die optionale RTC fehlt.
 
-- **Berührungslos:** kein Schwimmer und kein Sensor im Medium.
-- **Autark:** Messung läuft auch bei WLAN-, MQTT- oder NTP-Problemen weiter.
-- **Langzeitfähig:** bis zu 3650 Tageswerte in redundanter SPIFFS-Historie.
-- **Robust:** Filter, Plausibilitätsprüfung, ToF-Recovery und System-Health.
-- **Smart-Home-ready:** MQTT, JSON-Telemetrie und Home-Assistant-Discovery.
-- **Wartbar:** Web-OTA und ArduinoOTA.
-- **Auswertbar:** Verbrauch, Nachfüllungen, CSV Import/Export und Monats-/Jahresvergleich.
+## Oberfläche
 
-## Funktionsübersicht
+| Historie und Analyse | Systemdiagnose |
+|---|---|
+| ![Historie](docs/screenshots/v7.4.0-history.png) | ![Systemstatus](docs/screenshots/v7.4.0-systemstatus.png) |
+
+| Einstellungen | Live-API |
+|---|---|
+| ![Einstellungen](docs/screenshots/v7.4.0-settings.png) | `GET /api/status` liefert Messung, Sensoren, RTC, Zeitquelle und Health |
+
+## Funktionen
 
 | Bereich | Funktionen |
 |---|---|
-| Füllstand | Abstand, Füllhöhe, %, Liter, Tankgeometrie, Kalibrierung |
-| ToF | VL53L0X, VL53L1X, VL53L5CX |
-| Klima | BME280: Temperatur, Feuchte, Druck, Taupunkt |
+| Füllstand | Abstand, Füllhöhe, Prozent, Liter, Geometrie und Kalibrierung |
+| ToF | VL53L0X, VL53L1X und VL53L5CX |
+| Umwelt | BME280 oder BMP280, Temperatur, Druck, optional Feuchte/Taupunkt |
+| Zeit | NTP plus optionale DS3231 auf `0x68` |
 | Anzeige | SSD1306 OLED 128×64, mehrseitig |
-| Historie | ½ / 1 / 5 / 10 Jahre, bis 3650 Tage persistent |
-| Analyse | Verbrauch heute/7/30/365 Tage, Nachfüllungen, Monatsvergleich |
-| Daten | CSV Import/Export, Testdaten, Datenquellen-Markierung |
-| Netzwerk | WLAN, AP/STA, Webserver, mDNS, NTP |
-| Smart Home | MQTT + Home Assistant MQTT Discovery |
-| Update | Web-OTA + ArduinoOTA |
-| Diagnose | Heap, Resetursache, Reconnect-/Recovery-Zähler, Health |
+| Historie | ½ / 1 / 5 / 10 Jahre, bis zu 3650 Tageswerte |
+| Analyse | Verbrauch, Monatsvergleich und Nachfüllereignisse |
+| Daten | CRC-geschützte SPIFFS-Banken, CSV-Import und -Export |
+| Netzwerk | WLAN, AP/STA, Webserver, mDNS und OTA |
+| Smart Home | MQTT, JSON-Telemetrie und Home-Assistant-Discovery |
+| Diagnose | Heap, Resetursache, Recovery-Zähler und System-Health |
 
 ## Hardware
 
@@ -38,45 +51,52 @@ Fuellstandsmesser3 überwacht geschlossene Heizöl- und Flüssigkeitstanks berü
 |---|---|
 | Controller | ESP32-C3 Super Mini, 4 MB Flash |
 | I²C | SDA GPIO4, SCL GPIO5 |
-| ToF | Adresse 0x29 |
-| OLED | SSD1306 128×64, Adresse 0x3C |
-| Klima | BME280, Adresse 0x76 |
+| ToF | `0x29` |
+| OLED | SSD1306, `0x3C` |
+| Umwelt | BME280 oder BMP280, `0x76` |
+| RTC optional | DS3231, `0x68` |
+| EEPROM optional | AT24C32, häufig `0x57`; derzeit nicht beschrieben |
 | Status-LED | GPIO8 |
 | Display-/BOOT-Taste | GPIO9 |
-| Seriell | 115200 Baud |
+
+## Schnellstart
+
+```sh
+arduino-agent doctor
+arduino-agent scan --non-interactive
+arduino-agent status Fuellstandsmesser3
+arduino-agent build Fuellstandsmesser3
+arduino-agent flash Fuellstandsmesser3
+```
+
+Ziel: `esp32:esp32:esp32c3`, ESP32 Arduino Core `3.3.11`, 115200 Baud.
+Die festgeschriebenen Abhängigkeiten stehen in
+[`sketch.yaml`](Fuellstandsmesser3_V7.4.0/sketch.yaml) und [`agent.json`](agent.json).
+
+## Fertige Firmware
+
+Die geprüfte OTA-Datei `Fuellstandsmesser3-V7.4.0.bin` steht im
+[GitHub-Release V7.4.0](https://github.com/chmess/Fuellstandsmesser3/releases/tag/v7.4.0).
+Der SHA-256-Prüfwert ist in den Release Notes dokumentiert.
 
 ## Dokumentation
 
-- [Projektpräsentation](docs/PROJEKTPRAESENTATION.md)
-- [Hardware & Verdrahtung](docs/HARDWARE_WIRING.md)
-- [Installation & Betrieb](docs/INSTALLATION.md)
-- [Firmware-Architektur](Fuellstandsmesser3_V7.3.8/ARCHITEKTUR.md)
-- [Bestehende Projektdokumente](Fuellstandsmesser3_V7.3.8/docs/)
-
-## Build
-
-    arduino-agent build Fuellstandsmesser3
-    arduino-agent flash Fuellstandsmesser3
+- [Projektpräsentation V7.4.0](docs/PROJEKTPRAESENTATION_V7.4.0.md)
+- [Release Notes V7.4.0](docs/RELEASE_NOTES_V7.4.0.md)
+- [Hardware und Verdrahtung](docs/HARDWARE_WIRING.md)
+- [Installation und Betrieb](docs/INSTALLATION.md)
+- [Firmware-Architektur](Fuellstandsmesser3_V7.4.0/ARCHITEKTUR.md)
+- [Firmware-interne Projektdokumente](Fuellstandsmesser3_V7.4.0/docs/)
+- [Änderungshistorie](CHANGELOG.md)
 
 ## Sprachen
 
-Die Weboberfläche wird über getrennte Sprachdateien übersetzt:
-
-- `Fuellstandsmesser3_V7.3.8/Language_de.h` – Deutsch (Standard)
-- `Fuellstandsmesser3_V7.3.8/Language_en.h` – English
-
-Der Compiler-Schalter ist `FUELLSTANDSMESSER3_LANGUAGE`:
-
-    0 = Deutsch
-    1 = English
-
-Für Englisch in `agent.json` und `sketch.yaml` setzen:
-
-    compiler.cpp.extra_flags = -DFUELLSTANDSMESSER3_LANGUAGE=1
-
-Die Auswahl wird in die Firmware kompiliert; Messwerte, JSON-API, MQTT-Topics
-und gespeicherte Datenformate bleiben unabhängig von der Anzeigesprache.
+Deutsch ist die Standard-Websprache. Englisch wird zur Buildzeit über
+`FUELLSTANDSMESSER3_LANGUAGE=1` gewählt. JSON-Felder, MQTT-Topics und
+Persistenzformate bleiben sprachunabhängig.
 
 ## Sicherheit
 
-Hobby-/Entwicklungsprojekt. **Kein zertifiziertes Überfüll-, Leckage-, Sicherheits- oder Alarmsystem.** Nicht als alleinige Schutzfunktion eines Tanks verwenden.
+Hobby-/Entwicklungsprojekt. **Kein zertifiziertes Überfüll-, Leckage-,
+Sicherheits- oder Alarmsystem.** Nicht als alleinige Schutzfunktion eines Tanks
+verwenden.

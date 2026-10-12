@@ -10,6 +10,7 @@ profiles:
     - Adafruit SSD1306 (2.5.16)
     - Adafruit BME280 Library (2.3.0)
     - Adafruit Unified Sensor (1.1.15)
+    - Adafruit BMP280 Library (2.6.8)
     - Adafruit_VL53L0X (1.2.5)
     - Adafruit VL53L1X (3.1.2)
     - SparkFun VL53L5CX Arduino Library (1.0.3)

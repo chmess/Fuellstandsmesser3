@@ -1,6 +1,6 @@
 # Fuellstandsmesser3 – Projektmappe
 
-**Stand:** 24.08.2026
+**Stand:** 12.10.2026 · Firmware V7.4.0
 
 ## Einheitliche Struktur
 
@@ -16,7 +16,8 @@
 - `09_Versionshistorie`
 - `10_Praesentation`
 
-**Aktuelle Source-Dateien:** 18 (eine `.ino`, neun `.cpp`, neun `.h`)  
-**Archivdateien:** 1
+**Aktuelle Source-Dateien:** eine `.ino`, elf `.cpp`, dreizehn `.h`
+
+**Zentrale Ergänzungen:** DS3231, BMP280, RTC-/Heap-/Webdiagnose
 
 Reine Chat-/Paste-Schnipsel gehören nicht in die Projektmappe.

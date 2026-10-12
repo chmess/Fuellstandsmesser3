@@ -574,7 +574,7 @@ void oledPageEnvironment() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  oledHeader(F("UMGEBUNG"), F("BME280"));
+  oledHeader(F("UMGEBUNG"), String(environmentSensorName()));
 
   display.setTextSize(1);
   display.setCursor(0, 16);
@@ -693,7 +693,7 @@ void oledPageSystem() {
   display.print(vlOK ? F("OK") : F("FEHLER"));
 
   display.setCursor(70, 31);
-  display.print(F("BME"));
+  display.print(F("ENV"));
   display.setCursor(99, 31);
   display.print(bmeOK ? F("OK") : F("FEHLER"));
 
@@ -719,7 +719,7 @@ void oledPageDateTimeV6() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  oledHeader(F("UHRZEIT"), F("NTP"));
+  oledHeader(F("UHRZEIT"), String(activeTimeSource()));
 
   time_t now = time(nullptr);
 
@@ -739,7 +739,7 @@ void oledPageDateTimeV6() {
     oledCenteredText(String(dateBuf), 55, 1);
   } else {
     oledCenteredText(F("--:--:--"), 18, 3);
-    oledCenteredText(F("warte auf NTP-Sync"), 50, 1);
+    oledCenteredText(F("keine gueltige Zeit"), 50, 1);
   }
 
   display.display();
@@ -799,7 +799,7 @@ void oledPageStatusV6() {
   oledStatusPill(68, 16, F("MQTT"), mqttClient.connected());
 
   oledStatusPill(0, 29, F("TOF"), vlOK);
-  oledStatusPill(68, 29, F("BME"), bmeOK);
+  oledStatusPill(68, 29, F("ENV"), bmeOK);
 
   display.setTextSize(1);
   display.setCursor(0, 42);

@@ -53,6 +53,11 @@ void setupMDNS() {
 // NTP
 // ============================================================================
 
+static void ntpTimeSyncCallback(struct timeval *tv) {
+  (void)tv;
+  rtcNotifyNtpSync();
+}
+
 void setupNTP() {
 
   ntpStarted = false;
@@ -64,6 +69,8 @@ void setupNTP() {
   if (WiFi.status() != WL_CONNECTED) {
     return;
   }
+
+  sntp_set_time_sync_notification_cb(ntpTimeSyncCallback);
 
   configTime(
     cfg.timezoneOffset,
@@ -134,7 +141,7 @@ void ntpTask() {
   lastNtpSync = now;
 
   if (debugEnabled(DEBUG_LEVEL_SENSOR)) {
-    Serial.print("[NTP] Zeit synchronisiert: ");
+    Serial.print(ntpHasSynced() ? "[NTP] Zeit synchronisiert: " : "[ZEIT] Systemzeit verfuegbar, NTP wartet: ");
     Serial.println(epoch);
   }
 }

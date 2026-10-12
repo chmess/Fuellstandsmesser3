@@ -3,28 +3,37 @@
 #include "MeasurementAndSensors.h"
 
 // ============================================================================
-// BME280
+// BME280 / BMP280
 // ============================================================================
 
 void bmeInit() {
 
   bmeOK = false;
+  environmentSensorType = ENV_SENSOR_NONE;
 
   if (bme.begin(
         cfg.bmeAddress,
         &Wire)) {
 
     bmeOK = true;
+    environmentSensorType = ENV_SENSOR_BME280;
 
     Serial.println(
       "BME280 OK"
     );
 
+  } else if (bmp.begin(cfg.bmeAddress)) {
+
+    bmeOK = true;
+    environmentSensorType = ENV_SENSOR_BMP280;
+
+    Serial.print("BMP280 OK, Chip-ID 0x");
+    Serial.println(bmp.sensorID(), HEX);
+
   } else {
 
-    Serial.println(
-      "BME280 FEHLER"
-    );
+    Serial.print("BME280/BMP280 FEHLER, Chip-ID 0x");
+    Serial.println(bmp.sensorID(), HEX);
   }
 }
 
@@ -34,19 +43,21 @@ void readBME280() {
     return;
   }
 
-  float t =
-    bme.readTemperature();
+  const bool isBmp = environmentSensorType == ENV_SENSOR_BMP280;
+  const float t = isBmp ? bmp.readTemperature() : bme.readTemperature();
+  const float h = isBmp ? NAN : bme.readHumidity();
+  const float p = (isBmp ? bmp.readPressure() : bme.readPressure()) / 100.0f;
 
-  float h =
-    bme.readHumidity();
+  const bool plausible = isBmp
+      ? isfinite(t) && isfinite(p) && t >= -40.0f && t <= 85.0f &&
+        p >= 300.0f && p <= 1100.0f
+      : bmeValuesPlausible(t, h, p);
 
-  float p =
-    bme.readPressure() / 100.0f;
-
-  if (bmeValuesPlausible(t, h, p)) {
+  if (plausible) {
     temperature = t;
     humidity = h;
     pressure = p;
+    dewPoint = isBmp ? NAN : calculateDewPointC(temperature, humidity);
   } else if (debugEnabled(DEBUG_LEVEL_WARN)) {
     Serial.print("[BME] Ungueltiger Messwert verworfen: T=");
     Serial.print(t, 1);
@@ -56,8 +67,6 @@ void readBME280() {
     Serial.print(p, 1);
     Serial.println(" hPa");
   }
-
-  dewPoint = calculateDewPointC(temperature, humidity);
 
   if (debugEnabled(DEBUG_LEVEL_DETAIL)) {
 
@@ -240,6 +249,18 @@ bool initVL53L0X() {
         false,
         &Wire,
         Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT)) {
+
+    // Single-shot startRange()/rangingTest() wartet in der verwendeten
+    // Bibliothek intern in einer I2C-Schleife auf das Startbit. Bei einem
+    // ungueltigen/fehlenden Ziel kann das den Webserver mehrere Sekunden
+    // blockieren. Der kontinuierliche Modus wird einmalig gestartet; die
+    // loop liest spaeter ausschliesslich fertige Ergebnisse.
+    if (!vl53l0x.startRangeContinuous(1000)) {
+      if (debugEnabled(DEBUG_LEVEL_ERROR)) {
+        Serial.println("VL53L0X FEHLER: kontinuierliche Messung konnte nicht starten");
+      }
+      return false;
+    }
 
     if (debugEnabled(DEBUG_LEVEL_SENSOR)) {
       Serial.println(
@@ -561,27 +582,17 @@ bool readToF(uint16_t &distance) {
   if (cfg.vlSensorType ==
       SENSOR_VL53L0X) {
 
-    VL53L0X_RangingMeasurementData_t measure;
-
-    VL53L0X_Error result =
-      vl53l0x.rangingTest(
-        &measure,
-        false
-      );
-
-    if (result != 0) {
+    if (!vl53l0x.isRangeComplete()) {
+      sensorDataPending = true;
       return false;
     }
 
-    sensorStatus =
-      measure.RangeStatus;
+    distance = vl53l0x.readRangeResult();
+    sensorStatus = vl53l0x.readRangeStatus();
 
-    if (measure.RangeStatus != 0) {
+    if (sensorStatus != 0 || distance == 0xFFFFU) {
       return false;
     }
-
-    distance =
-      measure.RangeMilliMeter;
 
     return true;
   }
@@ -960,14 +971,18 @@ void measurementTask() {
 
   uint32_t now = millis();
 
-  if (now - lastMeasurement <
+  const bool continuePendingRead = sensorDataPending;
+
+  if (!continuePendingRead &&
+      now - lastMeasurement <
       cfg.measurementInterval) {
     return;
   }
 
-  lastMeasurement = now;
-
-  readBME280();
+  if (!continuePendingRead) {
+    lastMeasurement = now;
+    readBME280();
+  }
 
   uint16_t distance = 0;
 
